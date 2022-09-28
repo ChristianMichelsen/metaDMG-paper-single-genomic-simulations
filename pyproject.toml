@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "ngsngs-analysis"
+version = "0.1.0"
+description = ""
+authors = ["Christian Michelsen <christianmichelsen@gmail.com>"]
+readme = "README.md"
+packages = [{include = "ngsngs_analysis"}]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+pandas = "^1.5.0"
+metadmg = {version = "^0.32.4", extras = ["all"]}
+matplotlib = "^3.6.0"
+tqdm = "^4.64.1"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.15.3"
+black = {version = "^22.8.0", allow-prereleases = true}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

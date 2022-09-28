@@ -1,0 +1,9 @@
+/data/
+*.bam
+*.fastq
+*.fq
+meta*
+*.code-workspace
+old*
+/logs/
+results.zip
