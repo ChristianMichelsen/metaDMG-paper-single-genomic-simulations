@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
+import seaborn as sns
 
 #%%
 
@@ -19,6 +20,13 @@ d_damage_translate = {
     0.615: np.mean([0.20136 - 0.00518, 0.19891 - 0.00140]),
     0.93: np.mean([0.30046 - 0.00518, 0.29910 - 0.00141]),
 }
+
+
+#%%
+
+
+def sdom(x):
+    return x.std() / np.sqrt(len(x))
 
 
 #%%
@@ -127,8 +135,6 @@ def plot_single_group(group, sim_damage, sim_N_reads, bayesian=True):
 
     y_limits = {
         0.0: (0, 0.08),
-        0.0001: (0, 0.08),
-        0.0010: (0, 0.08),
         0.014: (0, 0.10),
         0.047: (0, 0.12),
         0.14: (0, 0.15),
@@ -210,6 +216,71 @@ def plot_single_group(group, sim_damage, sim_N_reads, bayesian=True):
         handles, labels = ax.get_legend_handles_labels()
         order = [0, 1, 2, 3, 2]
         ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order])
+
+    return fig
+
+
+#%%
+
+
+def plot_single_group_fit_quality(group, sim_damage, sim_N_reads, bayesian=True):
+
+    damage = d_damage_translate[sim_damage]
+
+    column = "Bayesian_z" if bayesian else "lambda_LR"
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    sns.histplot(
+        data=group,
+        x=column,
+        stat="density",
+        kde=True,
+        line_kws={"alpha": 0.5, "linestyle": "--"},
+        fill=False,
+        ax=ax,
+        color="grey",
+        # element="step",
+    )
+    sns.rugplot(
+        data=group,
+        x=column,
+        ax=ax,
+        color="grey",
+    )
+
+    ax.set(
+        xlabel="Bayesian z" if bayesian else "MAP, Likehood Ratio, lambda_LR",
+        title=f"Fit quality, N_reads={sim_N_reads}, sim_damage={sim_damage}, damage={damage:.2%}",
+    )
+
+    if bayesian:
+
+        x_limits = {
+            0.0: (-3, 1.5),
+            0.014: (-5, 2.5),
+            0.047: (-3.5, 5.5),
+            0.14: (0, 9.0),
+            0.30: (1, 12),
+            0.46: (1.5, 14),
+            0.615: (2, 15),
+            0.93: (3, 16),
+        }
+
+    else:
+
+        x_limits = {
+            0.0: (0, 5),
+            0.014: (0, 17),
+            0.047: (0, 50),
+            0.14: (4, 95),
+            0.30: (5, 130),
+            0.46: (8, 150),
+            0.615: (15, 165),
+            0.93: (25, 200),
+        }
+
+    ax.set(xlim=x_limits[sim_damage])
 
     return fig
 
@@ -328,3 +399,39 @@ def plot_single_group_agg(group_agg, sim_damage, bayesian=True):
         return plot_single_group_agg_bayesian(group_agg, sim_damage)
     else:
         return plot_single_group_agg_MAP(group_agg, sim_damage)
+
+
+#%%
+
+
+def plot_single_group_agg_fit_quality(group_agg, sim_damage, bayesian=True):
+
+    damage = d_damage_translate[sim_damage]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    col = "Bayesian_z" if bayesian else "lambda_LR"
+    title = "Bayesian z" if bayesian else "MAP, Likehood Ratio"
+
+    ax.errorbar(
+        group_agg["sim_N_reads"],
+        group_agg[f"{col}_mean"],
+        group_agg[f"{col}_std"],
+        fmt="o",
+        capsize=4,
+        capthick=1,
+        color="C2",
+    )
+
+    ax.set(
+        xlabel="N_reads",
+        ylabel="Bayesian z" if bayesian else "MAP, lambda_LR",
+        title=f"Fit quality, {title}, sim_damage={sim_damage}, damage={damage:.2%}",
+        # ylim=(0, None),
+    )
+
+    ax.set_xscale("log")
+
+    # ax.legend()
+
+    return fig
