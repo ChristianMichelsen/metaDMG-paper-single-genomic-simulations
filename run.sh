@@ -1,31 +1,87 @@
 # bowtie2-build Mycobacterium_leprae.fa Mycobacterium_leprae.fa
 
-# declare -a damages=("0.014" "0.047" "0.14" "0.30" "0.46" "0.615" "0.93")
-declare -a damages=("0" "0001" "001" "014" "047" "14" "30" "46" "615" "93")
+species=$1
+# species="homo"
+# species="betula"
 
-# declare -a Nreads=("100000")
-declare -a Nreads=("100" "200" "300" "400" "500" "600" "700" "800" "900" "1000" "5000" "10000" "100000" "1000000" "10000000")
+quick=true
+quick=false
+threads=10
 
-# seeds=`seq 1 2`
-# seeds=`seq 0 10`
-seeds=`seq 0 99`
 
-threads=6
-genome=./genome/Mycobacterium_leprae.fa.gz
+if [[ "$species" == "homo" ]]; then
+    genome=./genome/NC_012920.1_genomic.fna
+elif [[ "$species" == "betula" ]]; then
+    genome=./genome/KX703002.1.fa
+else
+    echo "bad species."
+    exit 1
+fi
+
+
+if [ "$quick" = true ] ; then
+    declare -a damages=("0.0" "0.96")
+    declare -a Nreads=("100" "1000")
+    declare -a length_means=("60")
+    seeds=`seq 0 1`
+else
+    declare -a damages=("0.0" "0.014" "0.047" "0.138" "0.303" "0.466" "0.96")
+    declare -a Nreads=("25" "50" "75" "100" "200" "300" "400" "500" "750" "1000" "5000" "10000" "100000")
+    declare -a length_means=("35" "60" "90")
+    seeds=`seq 0 99`
+fi
+
+length_std=10
 quality_scores=Test_Examples/AccFreqL150R1.txt
 
-mkdir fastqs
-mkdir bams
+if [ ! -f $genome.1.bt2 ]; then
+        bowtie2-build $genome $genome
+fi
+
+
+mkdir -p fastq
+mkdir -p bam
+
+COUNTER=0
+
+
+function compute_lognormal_mean {
+    mu=$length_mean
+    sigma=$length_std
+    echo "l($mu^2 / sqrt($sigma^2 + $mu^2))" | bc -l | awk '{printf "%f", $0}'
+}
+
+function compute_lognormal_std {
+    mu=$length_mean
+    sigma=$length_std
+    echo "sqrt(l(1 + $sigma^2 / $mu^2))" | bc -l | awk '{printf "%f", $0}'
+}
+
 
 function simulate_fastq {
-    if [ ! -f $fastq.fq ]
+
+
+    if ! [[ -f $fastq.fq  &&  -s $fastq.fq  ]] # does not exist or is empty
     then
-        ./ngsngs -i $genome -t $threads -r $Nread -ld Norm,60,10 -s $seed -seq SE -f fq -q1 $quality_scores -b 0.024,0.36,0.$damage,0.0097 -o $fastq
+        if (( $(echo "$damage > 0.0001" |bc -l) ));
+        then
+            briggs="-b 0.024,0.36,$damage,0.0097"
+        else
+            briggs="--noerror"
+        fi
+
+        lognorm_mean=$(compute_lognormal_mean)
+        lognorm_std=$(compute_lognormal_std)
+
+        args="-i $genome -t $threads -r $Nread -ld LogNorm,$lognorm_mean,$lognorm_std -s $seed -seq SE -f fq -q1 $quality_scores $briggs -o $fastq"
+        ./ngsngs $args
+        # echo $args
     fi
 }
 
 function make_bam_file {
-    if [ ! -f $bam ]
+
+    if ! [[ -f $bam  &&  -s $bam  ]] # does not exist or is empty
     then
         simulate_fastq
         bowtie2 -x $genome -q $fastq.fq --threads $threads --no-unal | samtools view -bS -@ $threads - | samtools sort -n -@ $threads -> $bam
@@ -33,46 +89,40 @@ function make_bam_file {
 
 }
 
-## now loop through the above array
+
 for damage in "${damages[@]}"
 do
-    ## now loop through the above array
+
     for Nread in "${Nreads[@]}"
     do
-        for seed in $seeds;
+
+        for length_mean in "${length_means[@]}"
         do
 
-            # echo "$damage, $Nread, $seed"
-            basename=sim-$damage-$Nread-$seed
-            fastq=./fastqs/$basename
-            bam=./bams/$basename.bam
+            for seed in $seeds;
+            do
 
-            # make_bam_file
+                basename=sim-$species-$damage-$Nread-$length_mean-$seed
+                fastq=./fastq/$basename
+                bam=./bam/$basename.bam
 
+                # echo "$damage, $Nread, $seed"
+                make_bam_file
+                let COUNTER++
+
+            done
         done
     done
 done
 
-#%%
-
-# metaDMG config ./bams/*.bam --damage-mode local --bayesian --long-name --parallel-samples 7 --overwrite
-# metaDMG compute config.yaml
+echo $COUNTER
 
 #%%
 
-
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.93,0.0097 -o test # 30%
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.615,0.0097 -o test # 20%
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.46,0.0097 -o test  # 15%
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.30,0.0097 -o test  # 10%
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.14,0.0097 -o test  # 5%
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.047,0.0097 -o test # 2%
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.014,0.0097 -o test # 1% 0.01127 / 0.00841
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.0000,0.0097 -o test # 0.00676 / 0.00413
-# ./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.0001,0.0097 -o test # 0.00680 / 0.00415
-./ngsngs -i ./genome/Mycobacterium_leprae.fa.gz -t 15 -r 1000000 -ld Norm,60,10 -s 1 -seq SE -f fq -q1 Test_Examples/AccFreqL150R1.txt -b 0.024,0.36,0.0010,0.0097 -o test # 0.00712 / 0.00440
-bowtie2 -x genome/Mycobacterium_leprae.fa.gz -q test.fq --threads 10 --no-unal | samtools view -bS - | samtools sort -n -> test.bam
-# # mapDamage -i test.bam -r genome/Mycobacterium_leprae.fa.gz --no-stats -d mapdam --merge-libraries
-# metaDMG config test.bam --damage-mode local --config-file config.yaml --overwrite # --bayesian
+# metaDMG config ./bam/*.bam --damage-mode local --bayesian --long-name --parallel-samples $threads --overwrite
 # metaDMG compute config.yaml
-./metaDMG-cpp getdamage --minlength 10 --printlength 50 --threads 8 test.bam
+
+
+# mkdir -p mapDamage
+# mapDamage -i $bamfile -r $db --no-stats -d mapDamage/$(basename $file).$(basename $db).AFG --merge-libraries
+# ./metaDMG-cpp getdamage --minlength 10 --printlength 50 --threads 8 $bam |  cut -f7-8 | sed -n -e 1,2p -e 51,53p  -e 102,110p

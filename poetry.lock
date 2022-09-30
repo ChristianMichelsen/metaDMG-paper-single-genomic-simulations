@@ -88,6 +88,14 @@ python-versions = ">=3.7"
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cloudpickle"
+version = "2.2.0"
+description = "Extended pickling support for Python objects"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "colorama"
 version = "0.4.5"
 description = "Cross-platform colored terminal text."
@@ -629,7 +637,7 @@ traitlets = "*"
 
 [[package]]
 name = "metadmg"
-version = "0.32.4"
+version = "0.33.0"
 description = "metaDMG: Estimating ancient damage in (meta)genomic DNA rapidly"
 category = "main"
 optional = false
@@ -1230,7 +1238,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "46da5cf8f70fa1b814b1473582ecc984353041d0b559f091fc8c6e229acbbe3a"
+content-hash = "050e7c5f0f34ca8b1d431cc7a5703e6d1773859116daa89e2dbfd007d019d749"
 
 [metadata.files]
 absl-py = [
@@ -1407,6 +1415,10 @@ cffi = [
 click = [
     {file = "click-8.1.3-py3-none-any.whl", hash = "sha256:bb4d8133cb15a609f44e8213d9b391b0809795062913b383c62be0ee95b1db48"},
     {file = "click-8.1.3.tar.gz", hash = "sha256:7682dc8afb30297001674575ea00d1814d808d6a36af415a82bd481d37ba7b8e"},
+]
+cloudpickle = [
+    {file = "cloudpickle-2.2.0-py3-none-any.whl", hash = "sha256:7428798d5926d8fcbfd092d18d01a2a03daf8237d8fcdc8095d256b8490796f0"},
+    {file = "cloudpickle-2.2.0.tar.gz", hash = "sha256:3f4219469c55453cfe4737e564b67c2a149109dabf7f242478948b895f61106f"},
 ]
 colorama = [
     {file = "colorama-0.4.5-py2.py3-none-any.whl", hash = "sha256:854bf444933e37f5824ae7bfc1e98d5bce2ebe4160d46b5edf346a89358e99da"},
@@ -1859,8 +1871,8 @@ matplotlib-inline = [
     {file = "matplotlib_inline-0.1.6-py3-none-any.whl", hash = "sha256:f1f41aab5328aa5aaea9b16d083b128102f8712542f819fe7e6a420ff581b311"},
 ]
 metadmg = [
-    {file = "metaDMG-0.32.4.tar.gz", hash = "sha256:aeb1bbf8f5f9a29a54e26770fd6b60b864ac55b51ae96b4689990084de33ba5b"},
-    {file = "metadmg-0.32.4-py3-none-any.whl", hash = "sha256:560d505d43811db6393d5506350acbb3186f06fa3953bb4c36e46fa7c4b90d62"},
+    {file = "metaDMG-0.33.0.tar.gz", hash = "sha256:052db55af8bf279236e2a7d587ee3c684a19f463b56b131348a5cb10d211c735"},
+    {file = "metadmg-0.33.0-py3-none-any.whl", hash = "sha256:07e24facfd927d4ffcd114e5e6393fa82a00fd860cc47a98ffd28b5d4c6a9d4c"},
 ]
 multipledispatch = [
     {file = "multipledispatch-0.6.0-py2-none-any.whl", hash = "sha256:407e6d8c5fa27075968ba07c4db3ef5f02bea4e871e959570eeb69ee39a6565b"},

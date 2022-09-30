@@ -9,10 +9,12 @@ packages = [{include = "ngsngs_analysis"}]
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
 pandas = "^1.5.0"
-metadmg = {version = "^0.32.4", extras = ["all"]}
+metadmg = {version = "^0.33.0", extras = ["all"]}
 matplotlib = "^3.6.0"
 tqdm = "^4.64.1"
 seaborn = "^0.12.0"
+dill = "^0.3.5.1"
+cloudpickle = "^2.2.0"
 
 
 [tool.poetry.group.dev.dependencies]

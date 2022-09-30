@@ -348,7 +348,7 @@ def plot_single_group_agg_bayesian(group_agg, sim_damage):
         xlabel="N_reads",
         ylabel="Bayesian_D_max",
         title=f"Bayesian D-max, sim_damage={sim_damage}, damage={damage:.2%}",
-        ylim=(0, None),
+        ylim=(0, 0.4),
     )
 
     handles, labels = ax.get_legend_handles_labels()

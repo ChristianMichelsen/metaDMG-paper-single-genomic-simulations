@@ -219,3 +219,29 @@ if save_plots:
             plt.close()
 
 # %%
+
+mu_X = np.array([30, 60, 90])
+sigma_X = 10
+mu = np.log(mu_X**2 / np.sqrt(sigma_X**2 + mu_X**2))
+sigma = np.sqrt(np.log(1 + sigma_X**2 / mu_X**2))
+
+
+# %%
+
+
+def lognorm_mean(mu, sigma):
+    return np.exp(mu + sigma**2 / 2)
+
+
+def lognorm_median(mu, sigma):
+    return np.exp(mu)
+
+
+def lognorm_mode(mu, sigma):
+    return np.exp(mu - sigma**2)
+
+
+lognorm_mean(4.082, 0.166)
+lognorm_median(4.082, 0.166)
+lognorm_mode(4.082, 0.166)
+# %%

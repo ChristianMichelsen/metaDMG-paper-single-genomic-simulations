@@ -1,4 +1,6 @@
 /data/
+/genome/
+/.cache/*
 *.bam
 *.fastq
 *.fq
