@@ -338,7 +338,7 @@ flask = "*"
 
 [[package]]
 name = "flatbuffers"
-version = "2.0.7"
+version = "22.9.24"
 description = "The FlatBuffers serialization format for Python"
 category = "main"
 optional = false
@@ -368,18 +368,18 @@ woff = ["brotli (>=1.0.1)", "brotlicffi (>=0.8.0)", "zopfli (>=0.1.4)"]
 
 [[package]]
 name = "iminuit"
-version = "2.16.0"
+version = "2.17.0"
 description = "Jupyter-friendly Python frontend for MINUIT2 in C++"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
 numpy = "*"
 
 [package.extras]
-doc = ["Jinja2 (==3.0)", "nbsphinx", "sphinx (>=4.1)", "sphinx-rtd-theme"]
-test = ["boost-histogram", "cython", "flake8", "ipykernel", "ipywidgets", "jacobi", "jax", "jaxlib", "joblib", "jupyter-client", "matplotlib", "mypy", "nbconvert", "nbformat", "nbsphinx", "numba", "numba-stats", "numpy", "pre-commit", "pydocstyle", "pylint", "pytest", "pytest-cov", "pytest-xdist", "resample", "scipy", "sphinx", "sphinx-rtd-theme", "tabulate"]
+doc = ["ipykernel", "jupyter-client", "nbconvert", "nbformat", "nbsphinx", "sphinx (>=4.1,<5.2)", "sphinx-rtd-theme"]
+test = ["boost-histogram", "coverage", "cython", "ipywidgets", "jacobi", "jax", "jaxlib", "joblib", "matplotlib", "numba", "numba-stats", "pytest", "resample (>=1.5)", "scipy", "tabulate"]
 
 [[package]]
 name = "importlib-resources"
@@ -637,38 +637,39 @@ traitlets = "*"
 
 [[package]]
 name = "metadmg"
-version = "0.33.0"
+version = "0.33.4"
 description = "metaDMG: Estimating ancient damage in (meta)genomic DNA rapidly"
 category = "main"
 optional = false
 python-versions = ">=3.9,<3.11"
 
 [package.dependencies]
-customtkinter = {version = ">=4.5.10,<5.0.0", optional = true, markers = "extra == \"gui\" or extra == \"all\""}
-dash = {version = ">=2.6.1,<3.0.0", extras = ["diskcache"], optional = true, markers = "extra == \"viz\" or extra == \"all\""}
+customtkinter = {version = ">=4.6.3,<5.0.0", optional = true, markers = "extra == \"gui\" or extra == \"all\""}
+dash = {version = ">=2.6.2,<3.0.0", extras = ["diskcache"], optional = true, markers = "extra == \"viz\" or extra == \"all\""}
 dash-bootstrap-components = {version = ">=1.2.1,<2.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
-flatbuffers = {version = ">=2.0.7,<3.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
-iminuit = {version = ">=2.15.2,<3.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
-joblib = {version = ">=1.1.0,<2.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
+flatbuffers = {version = ">=22.9.24,<23.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
+iminuit = {version = ">=2.17.0,<3.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
+joblib = {version = ">=1.2.0,<2.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
 logger-tt = {version = ">=1.7.0,<2.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
-matplotlib = {version = ">=3.5.3,<4.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
-numba = {version = ">=0.56.0,<0.57.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
+matplotlib = {version = ">=3.6.0,<4.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
+natsort = ">=8.2.0,<9.0.0"
+numba = {version = ">=0.56.2,<0.57.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
 numpyro = {version = ">=0.10.1,<0.11.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
-orjson = {version = ">=3.7.11,<4.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
+orjson = {version = ">=3.8.0,<4.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
 pandas = ">=1.5.0,<2.0.0"
-plotly = {version = ">=5.9.0,<6.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
-psutil = {version = ">=5.9.1,<6.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
+plotly = {version = ">=5.10.0,<6.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
+psutil = {version = ">=5.9.2,<6.0.0", optional = true, markers = "extra == \"fit\" or extra == \"all\""}
 pyarrow = ">=9.0.0,<10.0.0"
 PyYAML = ">=6.0,<7.0"
-scipy = ">=1.9.0,<2.0.0"
-tqdm = {version = ">=4.64.0,<5.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
+scipy = ">=1.9.1,<2.0.0"
+tqdm = {version = ">=4.64.1,<5.0.0", optional = true, markers = "extra == \"viz\" or extra == \"all\""}
 typer = {version = ">=0.6.1,<0.7.0", extras = ["all"]}
 
 [package.extras]
-all = ["customtkinter (>=4.5.10,<5.0.0)", "dash-bootstrap-components (>=1.2.1,<2.0.0)", "dash[diskcache] (>=2.6.1,<3.0.0)", "flatbuffers (>=2.0.7,<3.0.0)", "iminuit (>=2.15.2,<3.0.0)", "joblib (>=1.1.0,<2.0.0)", "logger-tt (>=1.7.0,<2.0.0)", "matplotlib (>=3.5.3,<4.0.0)", "numba (>=0.56.0,<0.57.0)", "numpyro (>=0.10.1,<0.11.0)", "orjson (>=3.7.11,<4.0.0)", "plotly (>=5.9.0,<6.0.0)", "psutil (>=5.9.1,<6.0.0)", "tqdm (>=4.64.0,<5.0.0)"]
-fit = ["flatbuffers (>=2.0.7,<3.0.0)", "iminuit (>=2.15.2,<3.0.0)", "joblib (>=1.1.0,<2.0.0)", "logger-tt (>=1.7.0,<2.0.0)", "numba (>=0.56.0,<0.57.0)", "numpyro (>=0.10.1,<0.11.0)", "psutil (>=5.9.1,<6.0.0)"]
-gui = ["customtkinter (>=4.5.10,<5.0.0)"]
-viz = ["dash-bootstrap-components (>=1.2.1,<2.0.0)", "dash[diskcache] (>=2.6.1,<3.0.0)", "matplotlib (>=3.5.3,<4.0.0)", "orjson (>=3.7.11,<4.0.0)", "plotly (>=5.9.0,<6.0.0)", "tqdm (>=4.64.0,<5.0.0)"]
+all = ["customtkinter (>=4.6.3,<5.0.0)", "dash-bootstrap-components (>=1.2.1,<2.0.0)", "dash[diskcache] (>=2.6.2,<3.0.0)", "flatbuffers (>=22.9.24,<23.0.0)", "iminuit (>=2.17.0,<3.0.0)", "joblib (>=1.2.0,<2.0.0)", "logger-tt (>=1.7.0,<2.0.0)", "matplotlib (>=3.6.0,<4.0.0)", "numba (>=0.56.2,<0.57.0)", "numpyro (>=0.10.1,<0.11.0)", "orjson (>=3.8.0,<4.0.0)", "plotly (>=5.10.0,<6.0.0)", "psutil (>=5.9.2,<6.0.0)", "tqdm (>=4.64.1,<5.0.0)"]
+fit = ["flatbuffers (>=22.9.24,<23.0.0)", "iminuit (>=2.17.0,<3.0.0)", "joblib (>=1.2.0,<2.0.0)", "logger-tt (>=1.7.0,<2.0.0)", "numba (>=0.56.2,<0.57.0)", "numpyro (>=0.10.1,<0.11.0)", "psutil (>=5.9.2,<6.0.0)"]
+gui = ["customtkinter (>=4.6.3,<5.0.0)"]
+viz = ["dash-bootstrap-components (>=1.2.1,<2.0.0)", "dash[diskcache] (>=2.6.2,<3.0.0)", "matplotlib (>=3.6.0,<4.0.0)", "orjson (>=3.8.0,<4.0.0)", "plotly (>=5.10.0,<6.0.0)", "tqdm (>=4.64.1,<5.0.0)"]
 
 [[package]]
 name = "multipledispatch"
@@ -699,6 +700,18 @@ description = "Experimental type system extensions for programs checked with the
 category = "dev"
 optional = false
 python-versions = "*"
+
+[[package]]
+name = "natsort"
+version = "8.2.0"
+description = "Simple yet flexible natural sorting in Python."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.extras]
+fast = ["fastnumbers (>=2.0.0)"]
+icu = ["PyICU (>=1.0.0)"]
 
 [[package]]
 name = "nest-asyncio"
@@ -1238,7 +1251,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "050e7c5f0f34ca8b1d431cc7a5703e6d1773859116daa89e2dbfd007d019d749"
+content-hash = "5ca6edacc9ca0c4a72efd89857223acd66b139d2a8e6b9f4d51a96437b74726c"
 
 [metadata.files]
 absl-py = [
@@ -1584,46 +1597,43 @@ Flask-Compress = [
     {file = "Flask_Compress-1.13-py3-none-any.whl", hash = "sha256:1128f71fbd788393ce26830c51f8b5a1a7a4d085e79a21a5cddf4c057dcd559b"},
 ]
 flatbuffers = [
-    {file = "flatbuffers-2.0.7-py2.py3-none-any.whl", hash = "sha256:71e135d533be527192819aaab757c5e3d109cb10fbb01e687f6bdb7a61ad39d1"},
-    {file = "flatbuffers-2.0.7.tar.gz", hash = "sha256:0ae7d69c5b82bf41962ca5fde9cc43033bc9501311d975fd5a25e8a7d29c1245"},
+    {file = "flatbuffers-22.9.24-py2.py3-none-any.whl", hash = "sha256:fc30f024e2eee55922d610f4d68626002fcd3c8f87d8058ec5ae9edd86993bcb"},
 ]
 fonttools = [
     {file = "fonttools-4.37.3-py3-none-any.whl", hash = "sha256:a5bc5f5d48faa4085310b8ebd4c5d33bf27c6636c5f10a7de792510af2745a81"},
     {file = "fonttools-4.37.3.zip", hash = "sha256:f32ef6ec966cf0e7d2aa88601fed2e3a8f2851c26b5db2c80ccc8f82bee4eedc"},
 ]
 iminuit = [
-    {file = "iminuit-2.16.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:151ab9188e4912595c6168939035754f77cf9a811ef2a5127f9a1852cb799e18"},
-    {file = "iminuit-2.16.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:dadd671b7d0b9e4215742673fa4f4a9edab18a473d3aa7e9c82a841e39778477"},
-    {file = "iminuit-2.16.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b2c4428ea61207cfc06d8400d9d41aa47d22f167df124a7c280309d2daf6422d"},
-    {file = "iminuit-2.16.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:71fb923a6638334eb1268ffa7cc7f38c0a0f57a745012a95615db8665974c9fa"},
-    {file = "iminuit-2.16.0-cp310-cp310-win_amd64.whl", hash = "sha256:332d7699ce8ff34bf57e855e1306ae7cf232d0c76b95577fbc1cf223bfa76546"},
-    {file = "iminuit-2.16.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:1dbc89e5ed50c2227f9402b4a987aa7025fbd083f5ba364af7fba713e30d87c1"},
-    {file = "iminuit-2.16.0-cp36-cp36m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:c91769ccb34f8b21c35b269d6a189f68ad23596654eaef0b6e50eac2cfc396dc"},
-    {file = "iminuit-2.16.0-cp36-cp36m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:fe491f480c247a93d68a8e3086be0018f4f8e8ce70f8ddf626670edb865f94f7"},
-    {file = "iminuit-2.16.0-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:298a5cc469fffe0f69e0fe3600ddbbd281d877d6eafb679dedea0467742712ca"},
-    {file = "iminuit-2.16.0-cp36-cp36m-win32.whl", hash = "sha256:a6f4f17811290f6241cbe2f9111070158b56987493180e41067d3c7ce83149c2"},
-    {file = "iminuit-2.16.0-cp36-cp36m-win_amd64.whl", hash = "sha256:27de1ef00ec5041d206b12ac3551ef33f083d56a056ab394252c5fa484ed8c48"},
-    {file = "iminuit-2.16.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:d2a3203b1e9e15b8332860a9c2018c6a0b537fa75760298e6a52f415a167ab49"},
-    {file = "iminuit-2.16.0-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:6fdc1987a8eaf8258809cdc57e3c4057144ce089d15fc7251dd5c5f0fbe07afe"},
-    {file = "iminuit-2.16.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:dd655b755054db67da50edf38c4b536287ed20f2bfc769b4798bd820dfde601a"},
-    {file = "iminuit-2.16.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cc3a2832965ffa15eae547e85fe35a186a3813bee17aa6cf5c146e64a3381219"},
-    {file = "iminuit-2.16.0-cp37-cp37m-win32.whl", hash = "sha256:2f3643c7d624abe80caa5af7891ef2386302299dce9ef7ace396185e10778297"},
-    {file = "iminuit-2.16.0-cp37-cp37m-win_amd64.whl", hash = "sha256:0c368e5a2ba4596f935803b8966cc8d13ee3517e72f754f447a1ea444731cabc"},
-    {file = "iminuit-2.16.0-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:1deec5fd2ee6bab76fdaf823b597bbfb3d7941f9a78b223230f5a08e61a3d57f"},
-    {file = "iminuit-2.16.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:7ace374853805affb0fe7b9c69499e36378b42cfcab49f6c0bc60b6088035cd8"},
-    {file = "iminuit-2.16.0-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:18e31b0b5146d795661ed9811f741316614410dc902c4c1099c336a270f3a518"},
-    {file = "iminuit-2.16.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:fa64a3b966d13b56e79a07688a917bfeaef5eb135001e8c6a04f255ad92484f0"},
-    {file = "iminuit-2.16.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9211e9e6b521d8ec0f0cd473fc8bdf232cf68c831d016f0bd3ebe7227ad534fe"},
-    {file = "iminuit-2.16.0-cp38-cp38-win32.whl", hash = "sha256:d3dfc4dfbb467ddbbabe4e8df47ccba533067c9a03cc0ffda1d7da74cb88b04f"},
-    {file = "iminuit-2.16.0-cp38-cp38-win_amd64.whl", hash = "sha256:73d89ad39a97b4ef423b2a2723db1cc80ad05b05e917a9b62ccb1fe848679ca9"},
-    {file = "iminuit-2.16.0-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:706097d4247d48085f252a909434903b9ee9102429e4a57fcf9e36ceb97bcaf2"},
-    {file = "iminuit-2.16.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:dc9717def2452ae737089029ab05076eb84dfe408ef0ce6bbcd701e2485a34ce"},
-    {file = "iminuit-2.16.0-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:c4a5e6e08f3f97c88333e6a06e8ab9370caaf222420f0242280fcf556d9c3b83"},
-    {file = "iminuit-2.16.0-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:59f403febeddc6e21961f0cf795568878179ec1d5684ef1af8b8d20175a03df6"},
-    {file = "iminuit-2.16.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d30a242577eff8118aec907c6f23853602c90fa0d0081f1cbd5de8b0fea8626e"},
-    {file = "iminuit-2.16.0-cp39-cp39-win32.whl", hash = "sha256:1259c8c06a04dd07ed9d1406de1107281064243cbf2c5d6242feb18eda3b053e"},
-    {file = "iminuit-2.16.0-cp39-cp39-win_amd64.whl", hash = "sha256:ed5bb2182af2e957eddadd578106e421eaa12c7f0818b9e7444ae1662e3559a7"},
-    {file = "iminuit-2.16.0.tar.gz", hash = "sha256:1024a519dbc8fd52d5fd2a3779fd485b09bc27c40556def8b6f91695423199d6"},
+    {file = "iminuit-2.17.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:dbd9de74ba74f5ed9af9d81281b6321363cad38201feccbf88ab57af0b50e056"},
+    {file = "iminuit-2.17.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:69dfea25b1cf0ee12e8445714a00315269eacbd1e0428cc834fa5bf1d15ac446"},
+    {file = "iminuit-2.17.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e9a3647278ba706d35072845fa28b79a3d1db6338204cc74471ef14ff39b0a42"},
+    {file = "iminuit-2.17.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d27ad233760d7b3ec7b541506c03d5ee4f0190b81db81c4912cc13ab429410bc"},
+    {file = "iminuit-2.17.0-cp310-cp310-win_amd64.whl", hash = "sha256:d8b33d6b9129dba1499fdfd434234477a31fd11d6737e4378f1711ee2fb0d946"},
+    {file = "iminuit-2.17.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:a27f460c46837ebf65270ff5afadf742803ec234f46449f64cfe2e49a45d345d"},
+    {file = "iminuit-2.17.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1d154c29b9c647dc86be6201572beefd32bc56be3372b0906af13635819b25e1"},
+    {file = "iminuit-2.17.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fbc5f68ab007b18c0b6e689df86299f4dcd0f09507437d4fe80c5561dc87f096"},
+    {file = "iminuit-2.17.0-cp311-cp311-win_amd64.whl", hash = "sha256:d6747f00d3d85e76d2fbd26097ad13de2013750a80a1c110db01df31895f4a40"},
+    {file = "iminuit-2.17.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:9eb25746ac43c5e86126388b10858e8564f646b381496d2e5ae1495d127ae98a"},
+    {file = "iminuit-2.17.0-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:bda4fa5bf21e1102f811f6e6af0e8e3c6741b817ec44b4874c5dc26eb26a306f"},
+    {file = "iminuit-2.17.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:dcab71cbb7784927375b86e22460cf705c3c2458efc62f99d29d5ef180eca8a3"},
+    {file = "iminuit-2.17.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2ffb5c145afc9076986fda2984c33f4097c8f2849336202b95f77f7a9a5fa0d2"},
+    {file = "iminuit-2.17.0-cp37-cp37m-win32.whl", hash = "sha256:1fea38c7e53a1882896c20a699d5f0c1f059b9112cabfff6ea58d851388526fa"},
+    {file = "iminuit-2.17.0-cp37-cp37m-win_amd64.whl", hash = "sha256:6aee2bc58e39ef8fa9b0b51c2481320a118b0f682237ab78e37e4cb148447763"},
+    {file = "iminuit-2.17.0-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:383155a6e29f63ef9946699b6bca3b538a4ab3a03aecd360302030dc774dfdbc"},
+    {file = "iminuit-2.17.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:24406e080460df3509aa76f04fc23f07a4d182b0aa1815e8124bdbf541fe770d"},
+    {file = "iminuit-2.17.0-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:e824472dd3e1a8aac351c18eb8da1517855a5c43b049acc8a5d5a26aae5ea35a"},
+    {file = "iminuit-2.17.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:105df5d93032a119a214c3dd579c2c9199232cb7caaad747672cbcedc64b430f"},
+    {file = "iminuit-2.17.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e7b2a7738cd9be0a15afa76aecc902e20cd7a9625db28bd77c8132614d7c6abf"},
+    {file = "iminuit-2.17.0-cp38-cp38-win32.whl", hash = "sha256:03a43932e7b59766c575c61f2d5a9da8d25f4d74f71142cf319ded5408426bec"},
+    {file = "iminuit-2.17.0-cp38-cp38-win_amd64.whl", hash = "sha256:359d75e20fbffa8e03d65ffd8797808661dbc52219aade7dc7f097b5a7d57fe8"},
+    {file = "iminuit-2.17.0-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:46b5c068ada4e2e08be1139a20115c51b73374e41dc2bad7add0fcaef0afc0be"},
+    {file = "iminuit-2.17.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:e94b0a3f03f31af18f8c6f165037575c52f0fc011facd55057e09e8918b5f6ac"},
+    {file = "iminuit-2.17.0-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:9a5b8ec2e00ce1d4d2aaa0f131693c80a27c7c14bed32f184520882062253911"},
+    {file = "iminuit-2.17.0-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:ced5326cba5c38a484d4f4eed086147c9bd6abcd228c456bb06d4c46564316a4"},
+    {file = "iminuit-2.17.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6966d5c6af3b351a7330567e0faae162289cde824118cb3ac02efc38dce0a240"},
+    {file = "iminuit-2.17.0-cp39-cp39-win32.whl", hash = "sha256:5ff863bbe4b82a6b6d69be3df7065e84c4197f23f2a121114a740f1cbef81676"},
+    {file = "iminuit-2.17.0-cp39-cp39-win_amd64.whl", hash = "sha256:9e88bf32b882abd4b5a67c8bfb09fc5a0388043b2d9ea39d401b8d30e32c6b6c"},
+    {file = "iminuit-2.17.0.tar.gz", hash = "sha256:75f4a8a2bad21fda7b6bd42df7ca04120fb24636ebf9b566d259b26f2044b1d0"},
 ]
 importlib-resources = [
     {file = "importlib_resources-5.9.0-py3-none-any.whl", hash = "sha256:f78a8df21a79bcc30cfd400bdc38f314333de7c0fb619763f6b9dabab8268bb7"},
@@ -1871,8 +1881,8 @@ matplotlib-inline = [
     {file = "matplotlib_inline-0.1.6-py3-none-any.whl", hash = "sha256:f1f41aab5328aa5aaea9b16d083b128102f8712542f819fe7e6a420ff581b311"},
 ]
 metadmg = [
-    {file = "metaDMG-0.33.0.tar.gz", hash = "sha256:052db55af8bf279236e2a7d587ee3c684a19f463b56b131348a5cb10d211c735"},
-    {file = "metadmg-0.33.0-py3-none-any.whl", hash = "sha256:07e24facfd927d4ffcd114e5e6393fa82a00fd860cc47a98ffd28b5d4c6a9d4c"},
+    {file = "metaDMG-0.33.4.tar.gz", hash = "sha256:6ac33199395a94e3f4208a24538527462859378cfacbbfd4fc4e684f23bf1523"},
+    {file = "metadmg-0.33.4-py3-none-any.whl", hash = "sha256:9b5a9dda9efb3f780adf4f0ae4869ab8ef666bc5c6afb528396f16e93c79b7db"},
 ]
 multipledispatch = [
     {file = "multipledispatch-0.6.0-py2-none-any.whl", hash = "sha256:407e6d8c5fa27075968ba07c4db3ef5f02bea4e871e959570eeb69ee39a6565b"},
@@ -1905,6 +1915,10 @@ multiprocess = [
 mypy-extensions = [
     {file = "mypy_extensions-0.4.3-py2.py3-none-any.whl", hash = "sha256:090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d"},
     {file = "mypy_extensions-0.4.3.tar.gz", hash = "sha256:2d82818f5bb3e369420cb3c4060a7970edba416647068eb4c5343488a6c604a8"},
+]
+natsort = [
+    {file = "natsort-8.2.0-py3-none-any.whl", hash = "sha256:04fe18fdd2b9e5957f19f687eb117f102ef8dde6b574764e536e91194bed4f5f"},
+    {file = "natsort-8.2.0.tar.gz", hash = "sha256:57f85b72c688b09e053cdac302dd5b5b53df5f73ae20b4874fcbffd8bf783d11"},
 ]
 nest-asyncio = [
     {file = "nest_asyncio-1.5.5-py3-none-any.whl", hash = "sha256:b98e3ec1b246135e4642eceffa5a6c23a3ab12c82ff816a92c612d68205813b2"},
@@ -2261,6 +2275,13 @@ PyYAML = [
     {file = "PyYAML-6.0-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:f84fbc98b019fef2ee9a1cb3ce93e3187a6df0b2538a651bfb890254ba9f90b5"},
     {file = "PyYAML-6.0-cp310-cp310-win32.whl", hash = "sha256:2cd5df3de48857ed0544b34e2d40e9fac445930039f3cfe4bcc592a1f836d513"},
     {file = "PyYAML-6.0-cp310-cp310-win_amd64.whl", hash = "sha256:daf496c58a8c52083df09b80c860005194014c3698698d1a57cbcfa182142a3a"},
+    {file = "PyYAML-6.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:d4b0ba9512519522b118090257be113b9468d804b19d63c71dbcf4a48fa32358"},
+    {file = "PyYAML-6.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:81957921f441d50af23654aa6c5e5eaf9b06aba7f0a19c18a538dc7ef291c5a1"},
+    {file = "PyYAML-6.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:afa17f5bc4d1b10afd4466fd3a44dc0e245382deca5b3c353d8b757f9e3ecb8d"},
+    {file = "PyYAML-6.0-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:dbad0e9d368bb989f4515da330b88a057617d16b6a8245084f1b05400f24609f"},
+    {file = "PyYAML-6.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:432557aa2c09802be39460360ddffd48156e30721f5e8d917f01d31694216782"},
+    {file = "PyYAML-6.0-cp311-cp311-win32.whl", hash = "sha256:bfaef573a63ba8923503d27530362590ff4f576c626d86a9fed95822a8255fd7"},
+    {file = "PyYAML-6.0-cp311-cp311-win_amd64.whl", hash = "sha256:01b45c0191e6d66c470b6cf1b9531a771a83c1c4208272ead47a3ae4f2f603bf"},
     {file = "PyYAML-6.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:897b80890765f037df3403d22bab41627ca8811ae55e9a722fd0392850ec4d86"},
     {file = "PyYAML-6.0-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:50602afada6d6cbfad699b0c7bb50d5ccffa7e46a3d738092afddc1f9758427f"},
     {file = "PyYAML-6.0-cp36-cp36m-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:48c346915c114f5fdb3ead70312bd042a953a8ce5c7106d5bfb1a5254e47da92"},

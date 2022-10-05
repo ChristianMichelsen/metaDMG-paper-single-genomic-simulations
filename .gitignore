@@ -1,11 +1,17 @@
 /data/
 /genome/
+
 /.cache/*
 *.bam
 *.fastq
 *.fq
+*.parquet
+*.db
+*.pyc
+.DS_Store
 meta*
 *.code-workspace
 old*
 /logs/
 results.zip
+reads_damages.txt

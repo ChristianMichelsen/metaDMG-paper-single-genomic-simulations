@@ -5,7 +5,7 @@ species=$1
 # species="betula"
 
 quick=true
-quick=false
+# quick=false
 threads=10
 
 
@@ -21,9 +21,13 @@ fi
 
 if [ "$quick" = true ] ; then
     declare -a damages=("0.0" "0.96")
+    declare -a damages=("0.96")
+    # declare -a damages=("0.0")
     declare -a Nreads=("100" "1000")
+    # declare -a Nreads=("1000000")
     declare -a length_means=("60")
-    seeds=`seq 0 1`
+    # seeds=`seq 0 1`
+    declare -a seeds=("0")
 else
     declare -a damages=("0.0" "0.014" "0.047" "0.138" "0.303" "0.466" "0.96")
     declare -a Nreads=("25" "50" "75" "100" "200" "300" "400" "500" "750" "1000" "5000" "10000" "100000")
@@ -67,7 +71,7 @@ function simulate_fastq {
         then
             briggs="-b 0.024,0.36,$damage,0.0097"
         else
-            briggs="--noerror"
+            briggs=""
         fi
 
         lognorm_mean=$(compute_lognormal_mean)
@@ -75,7 +79,7 @@ function simulate_fastq {
 
         args="-i $genome -t $threads -r $Nread -ld LogNorm,$lognorm_mean,$lognorm_std -s $seed -seq SE -f fq -q1 $quality_scores $briggs -o $fastq"
         ./ngsngs $args
-        # echo $args
+        echo $args
     fi
 }
 
