@@ -1,7 +1,11 @@
 
-FILES="./fastq/*.fq"
 
-out=test.txt
+species=$1
+# FILES=$1/*.fq
+FILES="./fastq/$species/*.fq"
+# FILES="./fastq/sim-*-*-??-*-*.fq"
+
+out=damaged_reads_$species.txt
 echo "HEADER" > $out
 
 for file in $FILES

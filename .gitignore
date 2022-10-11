@@ -1,6 +1,7 @@
 /data/
 /genome/
 
+__pycache__
 /.cache/*
 *.bam
 *.fastq
@@ -14,4 +15,5 @@ meta*
 old*
 /logs/
 results.zip
-reads_damages.txt
+damaged_reads*.txt
+config*.yaml

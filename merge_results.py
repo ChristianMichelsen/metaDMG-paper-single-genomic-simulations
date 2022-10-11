@@ -11,18 +11,16 @@ import utils
 
 #%%
 
-datapath = Path("data") / "results"
+reload(utils)
 
-# %%
-
-for path in datapath.glob("*.parquet"):
-    break
-# %%
-
-df = utils.load_results(use_columns_subset=False)
+species = "homo"
+df = utils.load_results(species, use_columns_subset=False)
 
 
 #%%
+
+reload(utils)
+data_dir = utils.get_data_dir(species)
 
 # reload(utils)
 for p, dfg in tqdm(df.groupby(utils.sim_columns[:-1])):
@@ -30,7 +28,7 @@ for p, dfg in tqdm(df.groupby(utils.sim_columns[:-1])):
     sim_species, sim_damage, sim_N_reads, sim_length = p
 
     name = f"{sim_species}-{sim_damage}-{sim_N_reads}-{sim_length}"
-    path = Path("data") / f"results-{sim_species}" / f"{name}.parquet"
+    path = data_dir / f"results-{sim_species}" / f"{name}.parquet"
 
     dfg["tax_id"] = dfg["sample"]
     dfg["sample"] = name
