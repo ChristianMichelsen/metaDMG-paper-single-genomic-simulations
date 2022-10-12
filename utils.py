@@ -724,8 +724,8 @@ def get_contour_settings(cut_type):
     elif cut_type == "prob_not_zero_damage":
         contour_settings = {
             "column": "Bayesian_prob_not_zero_damage",
-            "label_title": "Prob(D_max != 0) cut:",
-            "figure_title": "Prob(D_max != 0)",
+            "label_title": "Prob(D_max > 0%) cut:",
+            "figure_title": "Prob(D_max > 0%)",
             "cuts": [2, 3, 4],
             "cut_transform": get_n_sigma_probability,
             "label_template": lambda cut: f"{cut} σ",
