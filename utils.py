@@ -6,6 +6,8 @@ import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from scipy.ndimage import gaussian_filter
+from scipy.stats import norm as sp_norm
 from tqdm import tqdm
 
 #%%
@@ -84,19 +86,22 @@ def load_df(data_dir, path_parquet):
     return df
 
 
+ALL_SPECIES = ["homo", "betula", "GC-low", "GC-mid"]
+
+
 def get_data_dir(species):
-    if species in ["homo", "betula", "GC-low"]:
+    if species in ALL_SPECIES:
         return Path("data") / species
     raise AssertionError(f"Unknown species: {species}")
 
 
 def get_damaged_reads_path(species):
-    if species in ["homo", "betula", "GC-low"]:
+    if species in ALL_SPECIES:
         return f"damaged_reads_{species}.txt"
     raise AssertionError(f"Unknown species: {species}")
 
 
-def load_results(species, use_columns_subset=True):
+def load_results(species=ALL_SPECIES, use_columns_subset=True):
 
     data_dir = get_data_dir(species)
     path_parquet = data_dir / "df.parquet"
@@ -210,13 +215,16 @@ def load_results(species, use_columns_subset=True):
 
     df["sim_damage_percent"] = df["sim_damage"].map(d_damage_translate)
 
+    df["Bayesian_prob_not_zero_damage"] = 1 - df["Bayesian_prob_zero_damage"]
+    df["Bayesian_prob_gt_1p_damage"] = 1 - df["Bayesian_prob_lt_1p_damage"]
+
     return df
 
 
 #%%
 
 
-def load_multiple_species(species):
+def load_multiple_species(species=ALL_SPECIES):
     if not (isinstance(species, list) or isinstance(species, tuple)):
         species = [species]
     dfs = [load_results(specie) for specie in species]
@@ -399,7 +407,7 @@ def plot_individual_damage_results(
             sim_damage_percent,
             color="k",
             linestyle="--",
-            label='"Truth"',
+            label=f"{sim_damage_percent:.0%}",
         )
 
         if len(group) == 0:
@@ -510,7 +518,7 @@ def plot_combined_damage_results(
             sim_damage_percent,
             color="k",
             linestyle="--",
-            label='"Truth"',
+            label=f"{sim_damage_percent:.0%}",
         )
         ax.set_xscale("log")
 
@@ -668,15 +676,20 @@ def plot_single_group_agg_fit_quality(group_agg, sim_damage, bayesian=True):
 #%%
 
 
-def get_df_frac_significance(df, significance_cut):
+def get_df_frac(df_in, column, cut):
 
     out = []
-    for (sim_damage, sim_N_reads), group in df.groupby(["sim_damage", "sim_N_reads"]):
-        numerator = (group["Bayesian_D_max_significance"] > significance_cut).sum()
+    for (sim_species, sim_damage, sim_N_reads), group in df_in.groupby(
+        ["sim_species", "sim_damage", "sim_N_reads"]
+    ):
+
+        numerator = (group[column] > cut).sum()
         denominator = len(group)
         frac = numerator / denominator
+
         out.append(
             {
+                "sim_species": sim_species,
                 "sim_damage": sim_damage,
                 "sim_damage_percent": d_damage_translate[sim_damage],
                 "sim_N_reads": sim_N_reads,
@@ -689,54 +702,319 @@ def get_df_frac_significance(df, significance_cut):
     return df_fracs
 
 
-def get_df_frac_prob(df, prob, column):
+#%%
 
-    out = []
-    for (sim_damage, sim_N_reads), group in df.groupby(["sim_damage", "sim_N_reads"]):
-        numerator = (group[column] < prob).sum()
-        denominator = len(group)
-        frac = numerator / denominator
-        out.append(
-            {
-                "sim_damage": sim_damage,
-                "sim_damage_percent": d_damage_translate[sim_damage],
-                "sim_N_reads": sim_N_reads,
-                "log10_sim_N_reads": np.log10(sim_N_reads),
-                "frac": frac,
-            }
+
+def get_n_sigma_probability(n_sigma):
+    return sp_norm.cdf(n_sigma) - sp_norm.cdf(-n_sigma)
+
+
+def get_contour_settings(cut_type):
+
+    if cut_type == "significance":
+        contour_settings = {
+            "column": "Bayesian_D_max_significance",
+            "label_title": "Significance cut:",
+            "figure_title": "Bayesian Significance",
+            "cuts": [2, 3, 4],
+            "cut_transform": lambda x: x,
+            "label_template": lambda cut: f"{cut} σ",
+        }
+
+    elif cut_type == "prob_not_zero_damage":
+        contour_settings = {
+            "column": "Bayesian_prob_not_zero_damage",
+            "label_title": "Prob(D_max != 0) cut:",
+            "figure_title": "Prob(D_max != 0)",
+            "cuts": [2, 3, 4],
+            "cut_transform": get_n_sigma_probability,
+            "label_template": lambda cut: f"{cut} σ",
+            # "cuts": [0.9, 0.95, 0.99, 0.999],
+            # "label_template": lambda cut: f"{cut:.1%}",
+        }
+
+    elif cut_type == "prob_gt_1p_damage":
+        contour_settings = {
+            "column": "Bayesian_prob_gt_1p_damage",
+            "label_title": "Prob(D_max > 1%) cut:",
+            "figure_title": "Prob(D_max > 1%)",
+            "cuts": [2, 3, 4],
+            "cut_transform": get_n_sigma_probability,
+            "label_template": lambda cut: f"{cut} σ",
+            # "cuts": [0.9, 0.95, 0.99, 0.999],
+            # "cuts": [get_n_sigma_probability(cut) for cut in [2, 3, 4]],
+            # "label_template": lambda cut: f"{cut:.1%}",
+        }
+
+    else:
+        raise ValueError(f"Unknown cut_type: {cut_type}")
+
+    contour_settings["colors"] = ["C0", "C3", "C2", "C1", "C4"]
+    contour_settings["levels"] = [0.5, 0.95]
+    # contour_settings["alphas"] = [1, 0.3]
+    contour_settings["alphas"] = [0.3, 1.0]
+    # contour_settings["linestyles"] = ["solid", "dashed"]
+    contour_settings["linestyles"] = ["dashed", "solid"]
+    return contour_settings
+
+
+#%%
+
+
+def plot_contour_lines_on_ax(
+    df,
+    ax,
+    contour_settings,
+    sim_species,
+    gaussian_noise=None,
+):
+
+    for cut, color in zip(contour_settings["cuts"], contour_settings["colors"]):
+
+        cut_transformed = contour_settings["cut_transform"](cut)
+
+        df_fracs = get_df_frac(
+            df.query(f"sim_species == '{sim_species}'"),
+            column=contour_settings["column"],
+            cut=cut_transformed,
         )
 
-    df_fracs = pd.DataFrame(out)
-    return df_fracs
+        df_wide = pd.pivot(
+            df_fracs,
+            index="sim_damage_percent",
+            columns="sim_N_reads",
+            values="frac",
+        )
+
+        df_wide
+
+        if gaussian_noise is None:
+            data = df_wide.values
+
+        else:
+            data = gaussian_filter(df_wide.values, gaussian_noise)
+
+        for level, alpha, linestyle in zip(
+            contour_settings["levels"],
+            contour_settings["alphas"],
+            contour_settings["linestyles"],
+        ):
+            CS = ax.contour(
+                df_wide.columns,
+                df_wide.index,
+                data,
+                levels=[level],
+                alpha=alpha,
+                colors=color,
+                linestyles=linestyle,
+            )
+
+        ax.plot(
+            [np.nan, np.nan],
+            [np.nan, np.nan],
+            color=color,
+            label=contour_settings["label_template"](cut),
+        )
+
+    ax.set(
+        ylabel="Damage",
+        xlabel="N reads",
+        xscale="log",
+        title=f"Species = {sim_species}",
+    )
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+    # if i == N_species - 1:
+    # if i == 0:
+    # if i >= 0:
+
+    ax.legend(
+        loc="upper right",
+        bbox_to_anchor=(1, 0.99),
+        frameon=False,
+        title=contour_settings["label_title"],
+        alignment="right",
+    )
+
+    ax2 = ax.twinx()
+    for level, alpha, linestyle in zip(
+        contour_settings["levels"],
+        contour_settings["alphas"],
+        contour_settings["linestyles"],
+    ):
+        ax2.plot(
+            np.nan,
+            np.nan,
+            ls=linestyle,
+            label=f"{level:.0%}",
+            c="black",
+            alpha=alpha,
+        )
+
+    ax2.get_yaxis().set_visible(False)
+
+    ax2.legend(
+        loc="upper right",
+        bbox_to_anchor=(1, 0.75),
+        frameon=False,
+        title="Sim. fraction:",
+        alignment="right",
+    )
 
 
 # %%
 
-# np.set_printoptions(suppress=True)
-from scipy.interpolate import griddata
+
+def plot_contour_lines(df, cut_type, gaussian_noise=None):
+
+    contour_settings = get_contour_settings(cut_type)
+
+    all_species = df["sim_species"].unique()
+    N_species = len(all_species)
+
+    fig, axes = plt.subplots(figsize=(20, 5), ncols=N_species, sharey=True)
+    for i, (sim_species, ax) in enumerate(zip(all_species, axes)):
+        plot_contour_lines_on_ax(
+            df,
+            ax=ax,
+            contour_settings=contour_settings,
+            sim_species=sim_species,
+            gaussian_noise=gaussian_noise,
+        )
+
+    fig.suptitle(contour_settings["figure_title"], fontsize=16)
+    fig.subplots_adjust(top=0.85)
+    return fig
 
 
-def get_CS_locations(points, values, y_axis_positions, levels):
+# %%
 
-    # N_reads = np.linspace(points[:, 1].min(), points[:, 1].max(), 1000)
-    # N_reads = np.linspace(0, 500, 10 + 1)
-    N_reads = np.logspace(
-        np.log10(points[:, 1].min()), np.log10(points[:, 1].max()), 1000
-    )
+# # np.set_printoptions(suppress=True)
+# from scipy.interpolate import griddata
 
-    grid_x, grid_y = np.meshgrid(
-        y_axis_positions,
-        N_reads,
-        # np.log10(N_reads),
-    )
 
-    grid_z1 = griddata(points, values, (grid_x, grid_y), method="cubic")
+# def get_CS_locations(points, values, y_axis_positions, levels):
 
-    manual_locations = []
-    for i, level in enumerate(levels):
-        # break
-        N_read_position = N_reads[np.abs(grid_z1[:, i] - level).argmin()]
-        manual_locations.append((N_read_position, y_axis_positions[i]))
-    manual_locations
+#     # N_reads = np.linspace(points[:, 1].min(), points[:, 1].max(), 1000)
+#     # N_reads = np.linspace(0, 500, 10 + 1)
+#     N_reads = np.logspace(
+#         np.log10(points[:, 1].min()), np.log10(points[:, 1].max()), 1000
+#     )
 
-    return manual_locations
+#     grid_x, grid_y = np.meshgrid(
+#         y_axis_positions,
+#         N_reads,
+#         # np.log10(N_reads),
+#     )
+
+#     grid_z1 = griddata(points, values, (grid_x, grid_y), method="cubic")
+
+#     manual_locations = []
+#     for i, level in enumerate(levels):
+#         # break
+#         N_read_position = N_reads[np.abs(grid_z1[:, i] - level).argmin()]
+#         manual_locations.append((N_read_position, y_axis_positions[i]))
+#     manual_locations
+
+#     return manual_locations
+
+
+#%%
+
+# # significance_cut = 3
+
+# df["log10_sim_N_reads"] = np.log10(df["sim_N_reads"])
+# df["log10_Bayesian_D_max_significance"] = np.log10(df["Bayesian_D_max_significance"])
+# df["log10_Bayesian_prob_zero_damage"] = np.log10(df["Bayesian_prob_zero_damage"])
+# df["log10_Bayesian_prob_lt_1p_damage"] = np.log10(df["Bayesian_prob_lt_1p_damage"])
+
+# #%%
+
+
+# xys = [
+#     ("Bayesian_D_max_significance", "Bayesian_D_max"),
+#     ("Bayesian_prob_lt_1p_damage", "Bayesian_D_max"),
+#     ("Bayesian_prob_zero_damage", "Bayesian_D_max"),
+#     ("Bayesian_prob_lt_1p_damage", "Bayesian_D_max_significance"),
+#     ("Bayesian_prob_zero_damage", "Bayesian_D_max_significance"),
+#     ("Bayesian_prob_lt_1p_damage", "Bayesian_prob_zero_damage"),
+# ]
+
+
+# xys = [
+#     ("Bayesian_D_max_significance", "Bayesian_D_max"),
+#     ("log10_Bayesian_prob_lt_1p_damage", "Bayesian_D_max"),
+#     ("log10_Bayesian_prob_zero_damage", "Bayesian_D_max"),
+#     ("log10_Bayesian_prob_lt_1p_damage", "Bayesian_D_max_significance"),
+#     ("log10_Bayesian_prob_zero_damage", "Bayesian_D_max_significance"),
+#     ("log10_Bayesian_prob_lt_1p_damage", "log10_Bayesian_prob_zero_damage"),
+# ]
+
+
+# for xy in tqdm(xys):
+
+#     fig, ax = plt.subplots(figsize=(10, 6))
+#     sns.scatterplot(
+#         data=df,
+#         x=xy[0],
+#         y=xy[1],
+#         hue="sim_damage_percent",
+#         palette="deep",
+#         size="sim_N_reads",
+#         legend=False,
+#         sizes=(2, 100),
+#         alpha=0.5,
+#         ax=ax,
+#     )
+
+#     x_str = xy[0].replace("Bayesian_", "")
+#     y_str = xy[1].replace("Bayesian_", "")
+
+#     ax.set(title=f"Bayesian, {x_str} vs {y_str}", xlabel=x_str, ylabel=y_str)
+
+#     fig.savefig(f"figures/comparison_{species}_{xy[0]}_vs_{xy[1]}.pdf")
+
+#     # plt.close("all")
+
+
+# #%%
+
+# columns = [
+#     "Bayesian_D_max_significance",
+#     "log10_Bayesian_prob_lt_1p_damage",
+#     "log10_Bayesian_prob_zero_damage",
+#     "Bayesian_D_max",
+# ]
+
+# g = sns.PairGrid(
+#     df,
+#     vars=columns,
+#     hue="sim_damage_percent",
+#     palette="deep",
+#     diag_sharey=False,
+#     corner=True,
+# )
+
+# g.map_diag(
+#     sns.histplot,
+#     log_scale=(False, True),
+#     element="step",
+#     fill=False,
+# )
+# # g.map_diag(sns.kdeplot, log_scale=(False, True))
+# g.map_lower(
+#     sns.scatterplot,
+#     size=df["sim_N_reads"],
+#     sizes=(2, 100),
+#     alpha=0.5,
+# )
+
+# # g.add_legend()
+# g.add_legend(
+#     title="Legend:",
+#     adjust_subtitles=True,
+# )
+
+# # g.tight_layout()
+
+# g.figure.savefig(f"figures/comparison_{species}_pairgrid.pdf")
