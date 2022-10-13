@@ -50,7 +50,6 @@ df = df_all.query("sim_length == 60 and sim_seed < 100")
 
 #%%
 
-x = x
 
 #%%
 
@@ -240,7 +239,6 @@ with PdfPages(filename) as pdf:
 
     for sim_N_reads, group_0 in tqdm(df_0.groupby("sim_N_reads")):
         # break
-
         fig = utils.plot_zero_damage_group(group_0, sim_N_reads)
         pdf.savefig(fig)
         plt.close()
@@ -291,7 +289,7 @@ if make_plots:
 
     reload(utils)
 
-    filename = f"figures/combined_damage_results_bayesian.pdf"
+    filename = f"figures/combined_damage_results_lengths_bayesian.pdf"
     with PdfPages(filename) as pdf:
 
         for sim_damage, group_agg_all_lengths in tqdm(

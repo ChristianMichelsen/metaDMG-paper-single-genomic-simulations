@@ -915,7 +915,7 @@ def plot_contour_lines(df, cut_type, cuts=None, gaussian_noise=None):
 
 def plot_zero_damage_group(group_0, sim_N_reads):
 
-    fig, axes = plt.subplots(figsize=(15, 5), ncols=3)
+    fig, axes = plt.subplots(figsize=(20, 5), ncols=4)
 
     x0 = group_0["Bayesian_D_max_confidence_interval_1_sigma_low"].values
     axes[0].hist(
@@ -958,7 +958,21 @@ def plot_zero_damage_group(group_0, sim_N_reads):
         title=f"Max value: {x2.max():.3f}",
     )
 
-    fig.suptitle(f"sim_N_reads = {sim_N_reads}", fontsize=16)
+    x3 = group_0["Bayesian_D_max"].values
+    axes[3].hist(
+        x3,
+        range=(0, 0.08),
+        bins=100,
+        histtype="step",
+    )
+    axes[3].set(
+        xlabel="Bayesian D-max",
+        ylabel="Counts",
+        title=f"Max value: {x3.max():.3%}",
+    )
+    axes[3].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+    fig.suptitle(f"sim_N_reads = {sim_N_reads}, # = {len(group_0)}", fontsize=16)
     fig.subplots_adjust(top=0.85)
 
     return fig
