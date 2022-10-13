@@ -15,8 +15,13 @@ import utils
 
 #%%
 
-save_plots = False
-save_plots = True
+# save_plots = False
+# save_plots = True
+
+
+make_plots = False
+make_plots = True
+
 
 #%%
 
@@ -30,14 +35,22 @@ all_species = [
     "betula",
     "GC-low",
     "GC-mid",
+    "GC-high",
 ]
 
 #%%
 
 reload(utils)
 
-df = utils.load_multiple_species(all_species)
+df_all = utils.load_multiple_species(all_species)
 
+#%%
+
+df = df_all.query("sim_length == 60 and sim_seed < 100")
+
+#%%
+
+x = x
 
 #%%
 
@@ -48,23 +61,24 @@ df_damaged_reads = utils.load_multiple_damaged_reads(all_species)
 
 #%%
 
+if make_plots:
 
-reload(utils)
+    reload(utils)
 
-filename = f"figures/individual_damage_results_bayesian.pdf"
-with PdfPages(filename) as pdf_bayesian:
+    filename = f"figures/individual_damage_results_bayesian.pdf"
+    with PdfPages(filename) as pdf_bayesian:
 
-    for _, group_all_species in tqdm(df.groupby(["sim_damage", "sim_N_reads"])):
+        for _, group_all_species in tqdm(df.groupby(["sim_damage", "sim_N_reads"])):
+            # break
+            fig_bayesian = utils.plot_individual_damage_results(
+                df,
+                group_all_species,
+                df_damaged_reads=df_damaged_reads,
+                sim_length=60,
+            )
 
-        fig_bayesian = utils.plot_individual_damage_results(
-            df,
-            group_all_species,
-            df_damaged_reads=df_damaged_reads,
-            sim_length=60,
-        )
-
-        pdf_bayesian.savefig(fig_bayesian)
-        plt.close()
+            pdf_bayesian.savefig(fig_bayesian)
+            plt.close()
 
 
 #%%
@@ -82,9 +96,6 @@ def mean_of_CI_range_low(group):
 
 def mean_of_CI_range_high(group):
     return group["Bayesian_D_max_confidence_interval_1_sigma_"].mean()
-
-
-#%%
 
 
 def get_df_aggregated(df, df_damaged_reads):
@@ -167,36 +178,136 @@ df_aggregated = get_df_aggregated(df, df_damaged_reads)
 
 # %%
 
-reload(utils)
+if make_plots:
 
-# for sim_species, dfg_agg in df_aggregated.groupby("sim_species"):
-# break
+    reload(utils)
 
-filename = f"figures/combined_damage_results_bayesian.pdf"
-with PdfPages(filename) as pdf:
+    filename = f"figures/combined_damage_results_bayesian.pdf"
+    with PdfPages(filename) as pdf:
 
-    for sim_damage, group_agg_all_species in tqdm(df_aggregated.groupby("sim_damage")):
+        for sim_damage, group_agg_all_species in tqdm(
+            df_aggregated.groupby("sim_damage")
+        ):
 
-        fig = utils.plot_combined_damage_results(
-            df,
-            group_agg_all_species=group_agg_all_species,
-            df_damaged_reads=df_damaged_reads,
-            sim_length=60,
-        )
-        pdf.savefig(fig)
-        plt.close()
+            fig = utils.plot_combined_damage_results(
+                df,
+                group_agg_all_species=group_agg_all_species,
+                df_damaged_reads=df_damaged_reads,
+                sim_length=60,
+            )
+            pdf.savefig(fig)
+            plt.close()
 
 
 # %%
 
 
 reload(utils)
-cut_types = ["prob_gt_1p_damage", "prob_not_zero_damage", "significance"]
 
-filename = f"figures/contours_bayesian.pdf"
+cut_types = [
+    "significance",
+    "prob_not_zero_damage",
+    "prob_gt_1p_damage",
+]
+
+if make_plots:
+
+    filename = f"figures/contours_bayesian.pdf"
+    with PdfPages(filename) as pdf:
+
+        for cut_type in cut_types:
+            fig = utils.plot_contour_lines(
+                df,
+                cut_type,
+                # gaussian_noise=0.5,
+                # cuts=[1, 2, 3, 4],
+            )
+            pdf.savefig(fig)
+            plt.close()
+
+# %%
+
+
+#%%
+
+reload(utils)
+
+df_0 = df_all.query("sim_species == 'homo' and sim_damage == 0 and sim_length == 60")
+
+
+filename = f"figures/zero_damage_plots_bayesian.pdf"
 with PdfPages(filename) as pdf:
 
-    for cut_type in cut_types:
-        fig = utils.plot_contour_lines(df, cut_type)
+    for sim_N_reads, group_0 in tqdm(df_0.groupby("sim_N_reads")):
+        # break
+
+        fig = utils.plot_zero_damage_group(group_0, sim_N_reads)
         pdf.savefig(fig)
         plt.close()
+
+
+#%%
+
+
+#%%
+
+df_homo_99 = df_all.query("sim_species == 'homo' and sim_seed < 100")
+
+if make_plots:
+
+    reload(utils)
+
+    filename = f"figures/individual_damage_results_lengths_bayesian.pdf"
+    with PdfPages(filename) as pdf_bayesian:
+
+        for (sim_damage, sim_N_reads), group_all_lengths in tqdm(
+            df_homo_99.groupby(["sim_damage", "sim_N_reads"])
+        ):
+            # break
+
+            try:
+                fig_bayesian = utils.plot_individual_damage_results_lengths(
+                    df_homo_99,
+                    group_all_lengths,
+                    df_damaged_reads=df_damaged_reads,
+                    sim_species="homo",
+                )
+
+                pdf_bayesian.savefig(fig_bayesian)
+            except IndexError:
+                s = f"IndexError for sim_damage = {sim_damage}, sim_N_reads = {sim_N_reads}"
+                print(s)
+                pass
+
+            plt.close()
+
+
+#%%
+
+
+df_aggregated_lengths = get_df_aggregated(df_homo_99, df_damaged_reads)
+
+if make_plots:
+
+    reload(utils)
+
+    filename = f"figures/combined_damage_results_bayesian.pdf"
+    with PdfPages(filename) as pdf:
+
+        for sim_damage, group_agg_all_lengths in tqdm(
+            df_aggregated_lengths.groupby("sim_damage")
+        ):
+            try:
+                fig = utils.plot_combined_damage_results_lengths(
+                    df_homo_99,
+                    group_agg_all_lengths=group_agg_all_lengths,
+                    df_damaged_reads=df_damaged_reads,
+                    sim_species="homo",
+                )
+                pdf.savefig(fig)
+            except IndexError:
+                print(f"IndexError for sim_damage = {sim_damage}")
+                pass
+            plt.close()
+
+# %%

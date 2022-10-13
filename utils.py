@@ -20,6 +20,7 @@ d_damage_translate = {
     0.138: 0.05,  # np.mean([0.05111 - 0.00524, 0.04824 - 0.00137]),
     0.303: 0.10,  # np.mean([0.10149 - 0.00523, 0.09855 - 0.00137]),
     0.466: 0.15,  # np.mean([0.15183 - 0.00518, 0.14900 - 0.00137]),
+    0.626: 0.20,
     0.96: 0.30,  # np.mean([0.30046 - 0.00518, 0.29910 - 0.00141]),
 }
 
@@ -86,7 +87,13 @@ def load_df(data_dir, path_parquet):
     return df
 
 
-ALL_SPECIES = ["homo", "betula", "GC-low", "GC-mid"]
+ALL_SPECIES = [
+    "homo",
+    "betula",
+    "GC-low",
+    "GC-mid",
+    "GC-high",
+]
 
 
 def get_data_dir(species):
@@ -108,7 +115,7 @@ def load_results(species=ALL_SPECIES, use_columns_subset=True):
     df = load_df(data_dir, path_parquet)
     df.to_parquet(path_parquet)
 
-    df["Bayesian_D_max_significance"] = df["Bayesian_D_max"] / df["Bayesian_D_max_std"]
+    df["Bayesian_significance"] = df["Bayesian_D_max"] / df["Bayesian_D_max_std"]
 
     columns = [
         "sample",
@@ -119,7 +126,7 @@ def load_results(species=ALL_SPECIES, use_columns_subset=True):
         "Bayesian_D_max",
         "Bayesian_D_max_std",
         "significance",
-        "Bayesian_D_max_significance",
+        "Bayesian_significance",
         "Bayesian_prob_lt_5p_damage",
         "Bayesian_prob_lt_2p_damage",
         "Bayesian_prob_lt_1p_damage",
@@ -353,29 +360,42 @@ y_limits_individual_damage = {
     0.138: (0, 0.15),
     0.303: (0, 0.20),
     0.466: (0, 0.25),
+    0.626: (0, 0.35),
     0.96: (0, 0.60),
 }
 
 
 def plot_individual_damage_results(
-    df,
+    df_in,
     group_all_species,
     df_damaged_reads=None,
     sim_length=60,
+    x_lim=None,
+    figsize=(15, 12),
 ):
 
     sim_damage = group_all_species["sim_damage"].iloc[0]
     sim_damage_percent = d_damage_translate[sim_damage]
     sim_N_reads = group_all_species["sim_N_reads"].iloc[0]
 
-    all_species = df["sim_species"].unique()
+    all_species = df_in["sim_species"].unique()
     N_species = len(all_species)
 
     delta = 0.1
 
-    fig, axes = plt.subplots(figsize=(15, 12), nrows=N_species, sharex=True)
+    fig, axes = plt.subplots(figsize=figsize, nrows=N_species, sharex=True)
+
+    if N_species == 1:
+        axes = [axes]
+
     for i, (sim_species, ax) in enumerate(zip(all_species, axes)):
         # break
+
+        # if sim_species == "GC-mid":
+        #     break
+
+        # if sim_species == "GC-high":
+        #     break
 
         query = f"sim_species == '{sim_species}' and sim_length == {sim_length}"
         group = group_all_species.query(query)
@@ -468,7 +488,10 @@ def plot_individual_damage_results(
             # label="68% C.I.",
         )
 
-    ax.set(xlabel="Iteration", xlim=(-0.9, 100 - 0.1))
+    ax.set(
+        xlabel="Iteration",
+        xlim=(-0.9, 100 - 0.1) if x_lim is None else x_lim,
+    )
 
     fig.suptitle(
         f"Individual damages: \n"
@@ -484,9 +507,6 @@ def plot_individual_damage_results(
     # fig.tight_layout()
 
     return fig
-
-
-#%%
 
 
 #%%
@@ -709,14 +729,17 @@ def get_n_sigma_probability(n_sigma):
     return sp_norm.cdf(n_sigma) - sp_norm.cdf(-n_sigma)
 
 
-def get_contour_settings(cut_type):
+CUTS = [2, 3, 4]
+
+
+def get_contour_settings(cut_type, cuts=None):
 
     if cut_type == "significance":
         contour_settings = {
-            "column": "Bayesian_D_max_significance",
+            "column": "Bayesian_significance",
             "label_title": "Significance cut:",
             "figure_title": "Bayesian Significance",
-            "cuts": [2, 3, 4],
+            "cuts": CUTS if cuts is None else cuts,
             "cut_transform": lambda x: x,
             "label_template": lambda cut: f"{cut} σ",
         }
@@ -726,7 +749,7 @@ def get_contour_settings(cut_type):
             "column": "Bayesian_prob_not_zero_damage",
             "label_title": "Prob(D_max > 0%) cut:",
             "figure_title": "Prob(D_max > 0%)",
-            "cuts": [2, 3, 4],
+            "cuts": CUTS if cuts is None else cuts,
             "cut_transform": get_n_sigma_probability,
             "label_template": lambda cut: f"{cut} σ",
             # "cuts": [0.9, 0.95, 0.99, 0.999],
@@ -738,7 +761,7 @@ def get_contour_settings(cut_type):
             "column": "Bayesian_prob_gt_1p_damage",
             "label_title": "Prob(D_max > 1%) cut:",
             "figure_title": "Prob(D_max > 1%)",
-            "cuts": [2, 3, 4],
+            "cuts": CUTS if cuts is None else cuts,
             "cut_transform": get_n_sigma_probability,
             "label_template": lambda cut: f"{cut} σ",
             # "cuts": [0.9, 0.95, 0.99, 0.999],
@@ -865,7 +888,7 @@ def plot_contour_lines_on_ax(
 # %%
 
 
-def plot_contour_lines(df, cut_type, gaussian_noise=None):
+def plot_contour_lines(df, cut_type, cuts=None, gaussian_noise=None):
 
     contour_settings = get_contour_settings(cut_type)
 
@@ -884,6 +907,349 @@ def plot_contour_lines(df, cut_type, gaussian_noise=None):
 
     fig.suptitle(contour_settings["figure_title"], fontsize=16)
     fig.subplots_adjust(top=0.85)
+    return fig
+
+
+#%%
+
+
+def plot_zero_damage_group(group_0, sim_N_reads):
+
+    fig, axes = plt.subplots(figsize=(15, 5), ncols=3)
+
+    x0 = group_0["Bayesian_D_max_confidence_interval_1_sigma_low"].values
+    axes[0].hist(
+        x0,
+        range=(0, 0.001),
+        bins=100,
+        histtype="step",
+    )
+    axes[0].set(
+        xlabel="Bayesian D_max C.I. low",
+        ylabel="Counts",
+        title=f"Max value: {x0.max():.3%}",
+    )
+    axes[0].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+    x1 = (group_0["Bayesian_D_max"] - group_0["Bayesian_D_max_std"]).values
+    axes[1].hist(
+        x1,
+        range=(-0.15, 0.01),
+        bins=100,
+        histtype="step",
+    )
+    axes[1].set(
+        xlabel="Bayesian (D_max - std)",
+        ylabel="Counts",
+        title=f"Max value: {x1.max():.3%}",
+    )
+    axes[1].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+    x2 = group_0["Bayesian_significance"].values
+    axes[2].hist(
+        x2,
+        range=(0.2, 1.6),
+        bins=100,
+        histtype="step",
+    )
+    axes[2].set(
+        xlabel="Bayesian significance",
+        ylabel="Counts",
+        title=f"Max value: {x2.max():.3f}",
+    )
+
+    fig.suptitle(f"sim_N_reads = {sim_N_reads}", fontsize=16)
+    fig.subplots_adjust(top=0.85)
+
+    return fig
+
+
+#%%
+
+
+def plot_individual_damage_results_lengths(
+    df_in,
+    group_all_lengths,
+    df_damaged_reads=None,
+    sim_species="homo",
+    x_lim=None,
+    figsize=(15, 12),
+):
+
+    sim_damage = group_all_lengths["sim_damage"].iloc[0]
+    sim_damage_percent = d_damage_translate[sim_damage]
+    sim_N_reads = group_all_lengths["sim_N_reads"].iloc[0]
+
+    all_lengths = df_in["sim_length"].unique()
+    N_lengths = len(all_lengths)
+
+    delta = 0.1
+
+    fig, axes = plt.subplots(figsize=figsize, nrows=N_lengths, sharex=True)
+
+    if N_lengths == 1:
+        axes = [axes]
+
+    for i, (sim_length, ax) in enumerate(zip(all_lengths, axes)):
+        # break
+
+        query = f"sim_species == '{sim_species}' and sim_length == {sim_length}"
+        group = group_all_lengths.query(query)
+
+        str_mean_damaged_reads = ""
+        if df_damaged_reads is not None:
+            series_damaged_reads = get_damaged_reads(
+                df_damaged_reads,
+                sim_species=sim_species,
+                sim_damage=sim_damage,
+                sim_N_reads=sim_N_reads,
+                sim_length=sim_length,
+            )
+            if len(series_damaged_reads) > 0:
+                mean_damaged_reads = series_damaged_reads["frac_damaged"].mean()
+                str_mean_damaged_reads = (
+                    f", {mean_damaged_reads:.1%} damaged reads (mean) in fasta file"
+                )
+
+        ax.set(
+            ylabel="Bayesian D_max",
+            title=f"Mean Read Length = {sim_length}{str_mean_damaged_reads}",
+            ylim=y_limits_individual_damage[sim_damage],
+        )
+
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+        ax.axhline(
+            sim_damage_percent,
+            color="k",
+            linestyle="--",
+            label=f"{sim_damage_percent:.0%}",
+        )
+
+        if len(group) == 0:
+            continue
+
+        x = group["sim_seed"]
+
+        ax.errorbar(
+            x - delta,
+            group["Bayesian_D_max"],
+            group["Bayesian_D_max_std"],
+            fmt="o",
+            color="C2",
+            label="Mean ± std",
+        )
+
+        y, sy = from_low_high_to_errors_corrected(
+            group["Bayesian_D_max_confidence_interval_1_sigma_low"],
+            group["Bayesian_D_max_median"],
+            group["Bayesian_D_max_confidence_interval_1_sigma_high"],
+        )
+
+        mask = sy[1, :] >= 0
+        not_mask = np.logical_not(mask)
+
+        ax.errorbar(
+            x[mask] + delta,
+            y[mask],
+            sy[:, mask],
+            fmt="s",
+            capsize=4,
+            capthick=1,
+            label="Median ± 68% C.I.",
+            color="C3",
+        )
+
+        y2, sy2 = _from_low_high_to_errors(
+            group["Bayesian_D_max_confidence_interval_1_sigma_low"],
+            group["Bayesian_D_max_confidence_interval_1_sigma_high"],
+        )
+
+        ax.plot(
+            x[not_mask] + delta,
+            group["Bayesian_D_max_median"].values[not_mask],
+            "s",
+            color="C3",
+            # label="Median",
+        )
+
+        ax.errorbar(
+            x[not_mask] + delta,
+            y2[not_mask],
+            sy2[not_mask],
+            fmt="None",
+            capsize=4,
+            capthick=1,
+            color="C3",
+            # label="68% C.I.",
+        )
+
+    ax.set(
+        xlabel="Iteration",
+        xlim=(-0.9, 100 - 0.1) if x_lim is None else x_lim,
+    )
+
+    fig.suptitle(
+        f"Individual damages: \n"
+        f"{sim_N_reads} reads\n"
+        f"Briggs damage = {sim_damage}\n"
+        f"Damage percent = {sim_damage_percent:.0%}",
+    )
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    order = [1, 2, 0]
+    axes[0].legend([handles[idx] for idx in order], [labels[idx] for idx in order])
+
+    # fig.tight_layout()
+
+    return fig
+
+
+#%%
+
+
+def plot_combined_damage_results_lengths(
+    df_in,
+    group_agg_all_lengths,
+    df_damaged_reads=None,
+    sim_species="homo",
+):
+
+    sim_damage = group_agg_all_lengths["sim_damage"].iloc[0]
+    sim_damage_percent = d_damage_translate[sim_damage]
+
+    all_lengths = df_in["sim_length"].unique()
+    N_length = len(all_lengths)
+
+    delta = 0.07
+
+    fig, axes = plt.subplots(figsize=(15, 12), nrows=N_length, sharex=True)
+    for i, (sim_length, ax) in enumerate(zip(all_lengths, axes)):
+        # break
+
+        query = f"sim_species == '{sim_species}' and sim_length == {sim_length}"
+        group_agg = group_agg_all_lengths.query(query)
+
+        ax.axhline(
+            sim_damage_percent,
+            color="k",
+            linestyle="--",
+            label=f"{sim_damage_percent:.0%}",
+        )
+        ax.set_xscale("log")
+
+        ax.set(
+            title=f"Mean Read Length = {sim_length}",
+            ylabel="Bayesian D_max",
+            ylim=(0, 0.48),
+        )
+
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+        if len(group_agg) == 0:
+            continue
+
+        x = group_agg["sim_N_reads"]
+
+        ax.errorbar(
+            x * (1 - delta),
+            group_agg["Bayesian_D_max_mean_of_mean"],
+            group_agg["Bayesian_D_max_mean_of_std"],
+            fmt="o",
+            # capsize=4,
+            # capthick=1,
+            label="Mean of mean ± mean of std",
+            color="C2",
+        )
+
+        y, sy = from_low_high_to_errors_corrected(
+            group_agg["Bayesian_D_max_median_of_CI_range_low"],
+            group_agg["Bayesian_D_max_median_of_median"],
+            group_agg["Bayesian_D_max_median_of_CI_range_high"],
+        )
+
+        mask = sy[1, :] >= 0
+        not_mask = np.logical_not(mask)
+
+        ax.errorbar(
+            x.values[mask] * (1 + delta),
+            y[mask],
+            sy[:, mask],
+            fmt="s",
+            capsize=4,
+            capthick=1,
+            label="Median of median ± median of CI (16%-84%)",
+            color="C3",
+        )
+
+        y2, sy2 = _from_low_high_to_errors(
+            group_agg["Bayesian_D_max_median_of_CI_range_low"],
+            group_agg["Bayesian_D_max_median_of_CI_range_high"],
+        )
+
+        ax.plot(
+            x[not_mask] * (1 + delta),
+            y[not_mask],
+            "s",
+            color="C3",
+            # label="Median of median",
+        )
+
+        ax.errorbar(
+            x[not_mask] * (1 + delta),
+            y2[not_mask],
+            sy2[not_mask],
+            fmt="None",
+            capsize=4,
+            capthick=1,
+            color="C3",
+            # label="Median of CI (16%-84%)",
+        )
+
+        if df_damaged_reads is not None:
+
+            for sim_N_reads, group_agg_N_reads in group_agg.groupby("sim_N_reads"):
+                # break
+
+                series_damaged_reads = get_damaged_reads(
+                    df_damaged_reads,
+                    sim_species=sim_species,
+                    sim_damage=sim_damage,
+                    sim_length=sim_length,
+                    sim_N_reads=sim_N_reads,
+                )
+
+                str_mean_damaged_reads = ""
+                if len(series_damaged_reads) > 0:
+                    mean_damaged_reads = series_damaged_reads["frac_damaged"].mean()
+                    str_mean_damaged_reads = f"{mean_damaged_reads:.1%}"
+
+                top1 = (
+                    group_agg_N_reads["Bayesian_D_max_mean_of_mean"]
+                    + group_agg_N_reads["Bayesian_D_max_mean_of_std"]
+                )
+                top2 = group_agg_N_reads["Bayesian_D_max_median_of_CI_range_high"]
+                y = max([top1.iloc[0], top2.iloc[0]])
+                ax.text(
+                    sim_N_reads,
+                    y * 1.02,
+                    str_mean_damaged_reads,
+                    ha="center",
+                    va="bottom",
+                    fontsize=6,
+                )
+
+    ax.set(xlabel="N_reads")
+    fig.suptitle(
+        "Bayesian D-max\n"
+        f"Briggs damage = {sim_damage}\n"
+        f"Damage percent = {sim_damage_percent:.0%}",
+    )
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    order = [1, 2, 0]
+    axes[0].legend([handles[idx] for idx in order], [labels[idx] for idx in order])
+
     return fig
 
 
@@ -924,7 +1290,7 @@ def plot_contour_lines(df, cut_type, gaussian_noise=None):
 # # significance_cut = 3
 
 # df["log10_sim_N_reads"] = np.log10(df["sim_N_reads"])
-# df["log10_Bayesian_D_max_significance"] = np.log10(df["Bayesian_D_max_significance"])
+# df["log10_Bayesian_D_max_significance"] = np.log10(df["Bayesian_significance"])
 # df["log10_Bayesian_prob_zero_damage"] = np.log10(df["Bayesian_prob_zero_damage"])
 # df["log10_Bayesian_prob_lt_1p_damage"] = np.log10(df["Bayesian_prob_lt_1p_damage"])
 
@@ -932,21 +1298,21 @@ def plot_contour_lines(df, cut_type, gaussian_noise=None):
 
 
 # xys = [
-#     ("Bayesian_D_max_significance", "Bayesian_D_max"),
+#     ("Bayesian_significance", "Bayesian_D_max"),
 #     ("Bayesian_prob_lt_1p_damage", "Bayesian_D_max"),
 #     ("Bayesian_prob_zero_damage", "Bayesian_D_max"),
-#     ("Bayesian_prob_lt_1p_damage", "Bayesian_D_max_significance"),
-#     ("Bayesian_prob_zero_damage", "Bayesian_D_max_significance"),
+#     ("Bayesian_prob_lt_1p_damage", "Bayesian_significance"),
+#     ("Bayesian_prob_zero_damage", "Bayesian_significance"),
 #     ("Bayesian_prob_lt_1p_damage", "Bayesian_prob_zero_damage"),
 # ]
 
 
 # xys = [
-#     ("Bayesian_D_max_significance", "Bayesian_D_max"),
+#     ("Bayesian_significance", "Bayesian_D_max"),
 #     ("log10_Bayesian_prob_lt_1p_damage", "Bayesian_D_max"),
 #     ("log10_Bayesian_prob_zero_damage", "Bayesian_D_max"),
-#     ("log10_Bayesian_prob_lt_1p_damage", "Bayesian_D_max_significance"),
-#     ("log10_Bayesian_prob_zero_damage", "Bayesian_D_max_significance"),
+#     ("log10_Bayesian_prob_lt_1p_damage", "Bayesian_significance"),
+#     ("log10_Bayesian_prob_zero_damage", "Bayesian_significance"),
 #     ("log10_Bayesian_prob_lt_1p_damage", "log10_Bayesian_prob_zero_damage"),
 # ]
 
@@ -980,7 +1346,7 @@ def plot_contour_lines(df, cut_type, gaussian_noise=None):
 # #%%
 
 # columns = [
-#     "Bayesian_D_max_significance",
+#     "Bayesian_significance",
 #     "log10_Bayesian_prob_lt_1p_damage",
 #     "log10_Bayesian_prob_zero_damage",
 #     "Bayesian_D_max",

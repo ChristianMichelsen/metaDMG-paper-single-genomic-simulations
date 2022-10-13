@@ -39,10 +39,10 @@ if [ "$quick" = true ] ; then
     ids=`seq 0 2`
 
 else
-    declare -a damages=("0.0" "0.014" "0.047" "0.138" "0.303" "0.466" "0.96")
+    declare -a damages=("0.0" "0.014" "0.047" "0.138" "0.303" "0.466" "0.626" "0.96")
     declare -a Nreads=("10" "25" "50" "100" "250" "500" "1000" "2500" "5000" "10000" "25000" "50000" "100000")
     declare -a length_means=("60")
-    # declare -a length_means=("35" "60" "90")
+    #declare -a length_means=("35" "60" "90")
     ids=`seq 0 99`
 fi
 
@@ -114,7 +114,6 @@ function make_bam_file {
 
 
 function simulate_fastq_and_bam {
-    echo "$damage, $Nread, $id"
     simulate_fastq
     make_bam_file
 }
@@ -146,10 +145,10 @@ run_with_lock(){
 
 
 
-
-# cores=8
-open_sem $cores
-
+if ! [[ "$cores" -eq 1 ]];
+then
+    open_sem $cores
+fi
 
 for length_mean in "${length_means[@]}"
 do
@@ -164,11 +163,16 @@ do
                 fastq=./$fastq_dir/$basename
                 bam=./$bam_dir/$basename.bam
 
-                # simulate_fastq
-                # make_bam_file
+                if ! [[ "$cores" -eq 1 ]];
+                then
+                    run_with_lock simulate_fastq_and_bam
+                else
+                    echo "$damage, $Nread, $id"
+                    simulate_fastq
+                    make_bam_file
+                fi
 
                 let COUNTER++
-                run_with_lock simulate_fastq_and_bam
 
             done
         done
@@ -181,18 +185,44 @@ echo $COUNTER
 
 
 
-# #%%
-cores=5
-configfile=config-$species-mini.yaml
-poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
-poetry run metaDMG compute $configfile
+# # #%%
+# cores=5
+# configfile=config-$species-mini.yaml
+# poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+# poetry run metaDMG compute $configfile
+
+# # #%%
+# cores=5
+# configfile=config-$species-mini.yaml
+# poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-1?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+# poetry run metaDMG compute $configfile
+
+# # #%%
+# cores=5
+# configfile=config-$species-mini.yaml
+# poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-2?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+# poetry run metaDMG compute $configfile
 
 
-# #%%
-cores=5
-configfile=config-$species.yaml
-poetry run metaDMG config ./$bam_dir/sim-$species*.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
-poetry run metaDMG compute $configfile
+# # #%%
+# cores=5
+# configfile=config-$species-mini.yaml
+# poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-3?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+# poetry run metaDMG compute $configfile
+
+
+# # #%%
+# cores=5
+# configfile=config-$species.yaml
+# poetry run metaDMG config ./$bam_dir/sim-$species*.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+# poetry run metaDMG compute $configfile
+
+
+# # #%%
+# cores=5
+# configfile=config-$species.yaml
+# poetry run metaDMG config ./$bam_dir/sim-$species*.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+# poetry run metaDMG compute $configfile
 
 
 
@@ -201,4 +231,4 @@ echo "FINISHED"
 
 # # mkdir -p mapDamage
 # # mapDamage -i $bamfile -r $db --no-stats -d mapDamage/$(basename $file).$(basename $db).AFG --merge-libraries
-# # ./metaDMG-cpp getdamage --minlength 10 --printlength 50 --cores 8 $bam |  cut -f7-8 | sed -n -e 1,2p -e 51,53p  -e 102,110p
+# # ./metaDMG-cpp getdamage --minlength 10 --printlength 50 --threads 8 $bam | cut -f7-8 | sed -n -e 1,2p -e 51,53p  -e 102,110p
