@@ -9,7 +9,7 @@ packages = [{include = "ngsngs_analysis"}]
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
 pandas = "^1.5.0"
-metadmg = {version = "^0.35.1", extras = ["all"]}
+metadmg = {version = "^0.35.2", extras = ["all"]}
 matplotlib = "^3.6.0"
 tqdm = "^4.64.1"
 seaborn = "^0.12.0"
