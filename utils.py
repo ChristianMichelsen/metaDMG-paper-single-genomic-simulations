@@ -1370,7 +1370,7 @@ def plot_individual_damage_results_length(
 
         ax.set(
             ylabel=ylabel,
-            title=f"Mean Read Length = {sim_length}{str_mean_damaged_reads}",
+            title=f"Mean Fragment Length = {sim_length}{str_mean_damaged_reads}",
             ylim=y_limits_individual_damage[sim_damage],
         )
 
@@ -1566,7 +1566,7 @@ def plot_combined_damage_results_length(
         ax.set_xscale("log")
 
         ax.set(
-            title=f"Mean Read Length = {sim_length}",
+            title=f"Mean Fragment Length = {sim_length}",
             ylabel=ylabel,
             ylim=(0, 0.48),
         )
