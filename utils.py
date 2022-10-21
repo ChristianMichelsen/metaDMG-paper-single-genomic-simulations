@@ -464,28 +464,37 @@ def plot_individual_damage_result(
     group_all_species,
     df_damaged_reads=None,
     sim_length=60,
-    x_lim=None,
+    xlim=None,
+    ylim=None,
     figsize=(15, 15),
     method="Bayesian",
+    all_species=None,
+    fig_title=None,
+    ax_titles=True,
+    ax=None,
 ):
 
     sim_damage = group_all_species["sim_damage"].iloc[0]
     sim_damage_percent = d_damage_translate[sim_damage]
     sim_N_reads = group_all_species["sim_N_reads"].iloc[0]
 
-    all_species = df_in["sim_species"].unique()
+    if all_species is None:
+        all_species = df_in["sim_species"].unique()
     N_species = len(all_species)
 
     delta = 0.1
 
     if method.lower() == "bayesian":
         prefix = "Bayesian_"
-        ylabel = r"Damage, $D$"
+        ylabel = r"Damage"
     else:
         prefix = ""
-        ylabel = r"Damage, $D$, (MAP)"
+        ylabel = r"Damage (MAP)"
 
-    fig, axes = plt.subplots(figsize=figsize, nrows=N_species, sharex=True)
+    if ax is None:
+        fig, axes = plt.subplots(figsize=figsize, nrows=N_species, sharex=True)
+    else:
+        axes = ax
 
     if N_species == 1:
         axes = [axes]
@@ -514,8 +523,10 @@ def plot_individual_damage_result(
 
         ax.set(
             ylabel=ylabel,
-            title=f"Species = {sim_species}{str_mean_damaged_reads}",
-            ylim=y_limits_individual_damage[sim_damage],
+            title=f"Species = {sim_species}{str_mean_damaged_reads}"
+            if ax_titles
+            else "",
+            ylim=y_limits_individual_damage[sim_damage] if ylim is None else ylim,
         )
 
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
@@ -590,18 +601,22 @@ def plot_individual_damage_result(
 
     ax.set(
         xlabel="Iteration",
-        xlim=(-0.9, 100 - 0.1) if x_lim is None else x_lim,
+        xlim=(-0.9, 100 - 0.1) if xlim is None else xlim,
     )
 
-    fig.suptitle(
-        f"Individual damages: \n"
-        f"{sim_N_reads} reads\n"
-        f"Briggs damage = {sim_damage}\n"
-        f"Damage percent = {sim_damage_percent*100:.0f}"
-        r"\% "
-        "\n" + ylabel,
-    )
-    fig.subplots_adjust(top=0.85)
+    if ax is None:
+        if fig_title is None:
+            fig.suptitle(
+                f"Individual damages: \n"
+                f"{sim_N_reads} reads\n"
+                f"Briggs damage = {sim_damage}\n"
+                f"Damage percent = {sim_damage_percent*100:.0f}"
+                r"\% "
+                # "\n" + ylabel,
+            )
+        else:
+            fig.suptitle(fig_title)
+        fig.subplots_adjust(top=0.85)
 
     leg_kws = dict(loc="upper right", markerscale=0.75)
     if method.lower() == "bayesian":
@@ -614,7 +629,9 @@ def plot_individual_damage_result(
         )
     else:
         axes[0].legend(**leg_kws)
-    return fig
+
+    if ax is None:
+        return fig
 
 
 #%%
@@ -669,24 +686,38 @@ def plot_combined_damage_result(
     df_damaged_reads=None,
     sim_length=60,
     method="Bayesian",
+    all_species=None,
+    figsize=(15, 15),
+    fig_title=None,
+    xlim=None,
+    ylim=None,
+    ax_titles=True,
+    ax=None,
+    delta=0.07,
 ):
 
     sim_damage = group_agg_all_species["sim_damage"].iloc[0]
     sim_damage_percent = d_damage_translate[sim_damage]
 
-    all_species = df["sim_species"].unique()
+    if all_species is None:
+        all_species = df["sim_species"].unique()
     N_species = len(all_species)
-
-    delta = 0.07
 
     if method.lower() == "bayesian":
         prefix = "Bayesian_"
-        ylabel = r"Damage, $D$"
+        ylabel = r"Damage"
     else:
         prefix = ""
-        ylabel = r"Damage, $D$, (MAP)"
+        ylabel = r"Damage (MAP)"
 
-    fig, axes = plt.subplots(figsize=(15, 15), nrows=N_species, sharex=True)
+    if ax is None:
+        fig, axes = plt.subplots(figsize=figsize, nrows=N_species, sharex=True)
+    else:
+        axes = ax
+
+    if N_species == 1:
+        axes = [axes]
+
     for i, (sim_species, ax) in enumerate(zip(all_species, axes)):
         # break
 
@@ -702,10 +733,10 @@ def plot_combined_damage_result(
         ax.set_xscale("log")
 
         ax.set(
-            title=f"Species = {sim_species}",
+            title=f"Species = {sim_species}" if ax_titles else None,
             ylabel=ylabel,
-            xlim=(0.8 * 10**1, 1.2 * 10**5),
-            ylim=(0, 0.48),
+            xlim=(0.8 * 10**1, 1.2 * 10**5) if xlim is None else xlim,
+            ylim=(0, 0.48) if ylim is None else ylim,
         )
 
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
@@ -720,10 +751,9 @@ def plot_combined_damage_result(
             group_agg[f"{prefix}D_max_mean_of_mean"],
             group_agg[f"{prefix}D_max_mean_of_std"],
             fmt="o",
-            # capsize=4,
-            # capthick=1,
             label="Mean of mean ± mean of std",
             color="C0",
+            capsize=0,
         )
 
         if method.lower() == "bayesian":
@@ -742,8 +772,6 @@ def plot_combined_damage_result(
                 y[mask],
                 sy[:, mask],
                 fmt="s",
-                capsize=4,
-                capthick=1,
                 label=r"Median of median ± median of CI (68\%)",
                 color="C1",
             )
@@ -766,8 +794,6 @@ def plot_combined_damage_result(
                 y2[not_mask],
                 sy2[not_mask],
                 fmt="None",
-                capsize=4,
-                capthick=1,
                 color="C1",
                 # label="Median of CI (16%-84%)",
             )
@@ -809,23 +835,37 @@ def plot_combined_damage_result(
                     fontsize=6,
                 )
 
-    ax.set(xlabel="N_reads")
-    fig.suptitle(
-        f"{ylabel}\n"
-        f"Briggs damage = {sim_damage}\n"
-        f"Damage percent = {sim_damage_percent*100:.0f}" + r"\%",
-    )
+    ax.set(xlabel="Number of reads")
+    if ax is None:
+        if fig_title is None:
+            fig.suptitle(
+                f"{ylabel}\n"
+                f"Briggs damage = {sim_damage}\n"
+                f"Damage percent = {sim_damage_percent*100:.0f}" + r"\%",
+            )
+        else:
+            fig.suptitle(fig_title)
 
+    leg_kws = dict(loc="upper right", markerscale=0.75)
     if method.lower() == "bayesian":
         handles, labels = axes[0].get_legend_handles_labels()
         order = [1, 2, 0]
-        axes[0].legend([handles[idx] for idx in order], [labels[idx] for idx in order])
+        axes[0].legend(
+            [handles[idx] for idx in order],
+            [labels[idx] for idx in order],
+            **leg_kws,
+        )
     else:
         handles, labels = axes[0].get_legend_handles_labels()
         order = [1, 0]
-        axes[0].legend([handles[idx] for idx in order], [labels[idx] for idx in order])
+        axes[0].legend(
+            [handles[idx] for idx in order],
+            [labels[idx] for idx in order],
+            **leg_kws,
+        )
 
-    return fig
+    if ax is None:
+        return fig
 
 
 #%%
@@ -1341,7 +1381,7 @@ def plot_individual_damage_results_length(
     group_all_lengths,
     df_damaged_reads=None,
     sim_species="homo",
-    x_lim=None,
+    xlim=None,
     figsize=(15, 10),
     method="Bayesian",
 ):
@@ -1467,7 +1507,7 @@ def plot_individual_damage_results_length(
 
     ax.set(
         xlabel="Iteration",
-        xlim=(-0.9, 100 - 0.1) if x_lim is None else x_lim,
+        xlim=(-0.9, 100 - 0.1) if xlim is None else xlim,
     )
 
     fig.suptitle(
@@ -1779,7 +1819,7 @@ def plot_combined_damage_results_lengths(
 #     df_in,
 #     group_all_contigs,
 #     df_damaged_reads=None,
-#     x_lim=None,
+#     xlim=None,
 #     figsize=(15, 10),
 #     method="Bayesian",
 #     sim_length=60,
@@ -1905,7 +1945,7 @@ def plot_combined_damage_results_lengths(
 
 #     ax.set(
 #         xlabel="Iteration",
-#         xlim=(-0.9, 100 - 0.1) if x_lim is None else x_lim,
+#         xlim=(-0.9, 100 - 0.1) if xlim is None else xlim,
 #     )
 
 #     fig.suptitle(

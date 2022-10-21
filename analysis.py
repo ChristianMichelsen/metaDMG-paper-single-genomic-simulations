@@ -67,8 +67,6 @@ df_damaged_reads = utils.load_multiple_damaged_reads(all_species)
 
 #%%
 
-x = x
-
 #%%
 
 reload(utils)
@@ -194,93 +192,70 @@ group = df.query(
 #%%
 
 
-delta = 0.1
+#%%
 
-prefix = "Bayesian_"
+# group_agg = df_aggregated.query()
 
-fig, ax = plt.subplots()
 
-ax.axhline(
-    sim_damage_percent,
-    color="k",
-    linestyle="--",
-    label=f"{sim_damage_percent:.0%}",
-)
-
-x = group["sim_seed"]
-
-ax.errorbar(
-    x - delta,
-    group[f"{prefix}D_max"],
-    group[f"{prefix}D_max_std"],
-    fmt="o",
-    color="C0",
-    label=r"Mean $\pm$ std.",
-    capsize=0,
-)
-
-y, sy = utils.from_low_high_to_errors_corrected(
-    group["Bayesian_D_max_confidence_interval_1_sigma_low"],
-    group["Bayesian_D_max_median"],
-    group["Bayesian_D_max_confidence_interval_1_sigma_high"],
-)
-
-mask = sy[1, :] >= 0
-not_mask = np.logical_not(mask)
-
-ax.errorbar(
-    x[mask] + delta,
-    y[mask],
-    sy[:, mask],
-    fmt="s",
-    color="C1",
-    label=r"Median $\pm$ 68\% C.I.",
-)
-
-y2, sy2 = utils._from_low_high_to_errors(
-    group["Bayesian_D_max_confidence_interval_1_sigma_low"],
-    group["Bayesian_D_max_confidence_interval_1_sigma_high"],
-)
-
-ax.plot(
-    x[not_mask] + delta,
-    group["Bayesian_D_max_median"].values[not_mask],
-    "s",
-    color="C1",
-    # label="Median",
-)
-
-ax.errorbar(
-    x[not_mask] + delta,
-    y2[not_mask],
-    sy2[not_mask],
-    fmt="None",
-    color="C1",
-    # label="68% C.I.",
+group_agg = df_aggregated.query(
+    f"sim_species == '{sim_species}'"
+    f" and sim_damage == {sim_damage}"
+    f" and sim_length == {sim_length}"
+    # f" and sim_N_reads == {sim_N_reads}"
+    # f" and sim_seed < {max_seed}"
 )
 
 
-ax.set(
-    title=f"Simulation",
-    xlabel="Iteration",
-    ylabel=r"Damage, $D$",
-    xlim=(-0.9, max_seed - 0.1),
-    ylim=(-0.0001, 0.1),
+#%%
+
+
+fig, (ax1, ax2) = plt.subplots(figsize=(14, 4), ncols=2)
+
+reload(utils)
+utils.plot_individual_damage_result(
+    df_in=df,
+    group_all_species=group,
+    df_damaged_reads=df_damaged_reads,
+    sim_length=60,
+    method="Bayesian",
+    all_species=["homo"],
+    figsize=(6, 4),
+    xlim=(-0.5, max_seed - 0.1),
+    ylim=(-0.0001, 0.09),
+    # fig_title=f"Simulation, {sim_N_reads} reads",
+    fig_title=f"",
+    ax_titles=False,
+    ax=ax1,
 )
 
-ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
-handles, labels = ax.get_legend_handles_labels()
-order = [1, 2, 0]
-ax.legend(
-    [handles[idx] for idx in order],
-    [labels[idx] for idx in order],
-    loc="upper right",
-    markerscale=0.7,
-    # frameon=True,
+reload(utils)
+utils.plot_combined_damage_result(
+    df,
+    group_agg_all_species=group_agg,
+    df_damaged_reads=None,
+    sim_length=60,
+    method="Bayesian",
+    all_species=["homo"],
+    figsize=(6, 4),
+    fig_title=f"Simulation",
+    # xlim=(0.7 * 10**1, 1.3 * 10**5),
+    xlim=(0.7 * 10**2, 1.3 * 10**5),
+    # ylim=(-0.0001, 0.18),
+    ylim=(-0.0001, 0.09),
+    ax_titles=False,
+    delta=0.1,
+    ax=ax2,
 )
 
-fig.savefig("fig-test.pdf")
 
+# ax1.annotate("A)", (0.02, 0.9), xycoords="axes fraction", fontsize=14)
+ax1.set(
+    title=r"A) Homo, $\delta_\mathrm{ss}$ = "
+    f"{sim_damage:.3f}, L = {sim_length}, {sim_N_reads} reads"
+)
+ax2.set(title=r"B) Homo, $\delta_\mathrm{ss}$ = " f"{sim_damage:.3f}, L = {sim_length}")
+
+fig.savefig("figures/simulation_overview.pdf")
 
 # %%
