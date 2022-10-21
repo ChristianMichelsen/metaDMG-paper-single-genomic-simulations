@@ -788,6 +788,18 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "niceplots"
+version = "1.3.0"
+description = "Plotting utilities for matplotlib in python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+matplotlib = ">=2.2"
+numpy = ">=1.16"
+
+[[package]]
 name = "numba"
 version = "0.56.2"
 description = "compiling Python code using LLVM"
@@ -1396,7 +1408,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "6d13974dbb3db2fe55ddc3202b81e3db8816651bded99558c0f9b5a9578c39b7"
+content-hash = "54a0355f5c76675a8643b7a8dce4ecf5a18b6b626cc2c8b5de20e2e1f88a9101"
 
 [metadata.files]
 absl-py = [
@@ -2121,6 +2133,9 @@ natsort = [
 nest-asyncio = [
     {file = "nest_asyncio-1.5.5-py3-none-any.whl", hash = "sha256:b98e3ec1b246135e4642eceffa5a6c23a3ab12c82ff816a92c612d68205813b2"},
     {file = "nest_asyncio-1.5.5.tar.gz", hash = "sha256:e442291cd942698be619823a17a86a5759eabe1f8613084790de189fe9e16d65"},
+]
+niceplots = [
+    {file = "niceplots-1.3.0-py3-none-any.whl", hash = "sha256:e932faa47d150ddc78a454bfdd4f411bd6be29de5c99fc5ebd1207ab782ea030"},
 ]
 numba = [
     {file = "numba-0.56.2-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:e50d1de5291d1afd3d660ca149447c682d70b8d3c22f97ed9a3076e6344330b0"},
