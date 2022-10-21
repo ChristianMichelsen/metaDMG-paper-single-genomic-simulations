@@ -1,5 +1,7 @@
 /data/
 /genome/
+/bam/
+/fasta/
 
 __pycache__
 /.cache/*

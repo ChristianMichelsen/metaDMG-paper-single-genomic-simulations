@@ -6,9 +6,12 @@ species=$1
 # species="GC-low"
 # species="GC-mid"
 # species="GC-high"
+# species="contig1k"
+# species="contig10k"
+# species="contig100k"
 
-quick=false
-# quick=true
+# quick=false
+quick=true
 threads=1
 
 # cores=4
@@ -25,6 +28,12 @@ elif [[ "$species" == "GC-mid" ]]; then
     genome=./genome/GCA_900475315.1_43721_G02_genomic.fna
 elif [[ "$species" == "GC-high" ]]; then
     genome=./genome/GCA_001929375.1_ASM192937v1_genomic.fna
+elif [[ "$species" == "contig1k" ]]; then
+    genome=./genome/contig1000.fna
+elif [[ "$species" == "contig10k" ]]; then
+    genome=./genome/contig10000.fna
+elif [[ "$species" == "contig100k" ]]; then
+    genome=./genome/contig100000.fna
 else
     echo "bad species."
     exit 1
@@ -32,15 +41,15 @@ fi
 
 
 if [ "$quick" = true ] ; then
-    declare -a damages=("0.0" "0.138")
-    declare -a Nreads=("25" "100")
-    # declare -a Nreads=("100000" "1000000")
+    declare -a damages=("0.0" "0.303")
+    declare -a Nreads=("100" "1000")
     declare -a length_means=("60")
-    ids=`seq 0 2`
+    ids=`seq 0 1`
 
 else
     declare -a damages=("0.0" "0.014" "0.047" "0.138" "0.303" "0.466" "0.626" "0.96")
-    declare -a Nreads=("10" "25" "50" "100" "250" "500" "1000" "2500" "5000" "10000" "25000" "50000" "100000")
+    # declare -a Nreads=("10" "25" "50" "100" "250" "500" "1000" "2500" "5000" "10000" "25000" "50000" "100000")
+    declare -a Nreads=("10" "100" "1000" "10000" "100000")
     declare -a length_means=("60")
     #declare -a length_means=("35" "60" "90")
     ids=`seq 0 99`
@@ -185,45 +194,44 @@ echo $COUNTER
 
 
 
-# # #%%
-# cores=5
-# configfile=config-$species-mini.yaml
-# poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
-# poetry run metaDMG compute $configfile
+# #%%
+cores=5
+configfile=config-$species-mini.yaml
+poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-?.bam --damage-mode global --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+poetry run metaDMG compute $configfile
 
-# # #%%
-# cores=5
-# configfile=config-$species-mini.yaml
-# poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-1?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
-# poetry run metaDMG compute $configfile
+# #%%
+cores=5
+configfile=config-$species-mini.yaml
+poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-1?.bam --damage-mode global --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+poetry run metaDMG compute $configfile
 
-# # #%%
-# cores=5
-# configfile=config-$species-mini.yaml
-# poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-2?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
-# poetry run metaDMG compute $configfile
-
-
-# # #%%
-# cores=5
-# configfile=config-$species-mini.yaml
-# poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-3?.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
-# poetry run metaDMG compute $configfile
+# #%%
+cores=5
+configfile=config-$species-mini.yaml
+poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-2?.bam --damage-mode global --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+poetry run metaDMG compute $configfile
 
 
-# # #%%
-# cores=5
-# configfile=config-$species.yaml
-# poetry run metaDMG config ./$bam_dir/sim-$species*.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
-# poetry run metaDMG compute $configfile
+# #%%
+cores=5
+configfile=config-$species-mini.yaml
+poetry run metaDMG config ./$bam_dir/sim-$species-*-*-*-3?.bam --damage-mode global --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+poetry run metaDMG compute $configfile
 
 
-# # #%%
-# cores=5
-# configfile=config-$species.yaml
-# poetry run metaDMG config ./$bam_dir/sim-$species*.bam --damage-mode local --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
-# poetry run metaDMG compute $configfile
+# #%%
+cores=5
+configfile=config-$species.yaml
+poetry run metaDMG config ./$bam_dir/sim-$species*.bam --damage-mode global --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+poetry run metaDMG compute $configfile
 
+
+# #%%
+cores=5
+configfile=config-$species.yaml
+poetry run metaDMG config ./$bam_dir/sim-$species*.bam --damage-mode global --bayesian --long-name --parallel-samples $cores --overwrite --config-file $configfile --output-dir $data_dir
+poetry run metaDMG compute $configfile
 
 
 echo "FINISHED"

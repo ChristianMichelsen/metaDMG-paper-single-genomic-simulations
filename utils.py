@@ -94,6 +94,9 @@ ALL_SPECIES = [
     "GC-low",
     "GC-mid",
     "GC-high",
+    "contig1k",
+    "contig10k",
+    "contig100k",
 ]
 
 
@@ -613,9 +616,9 @@ def plot_individual_damage_result(
 #%%
 
 
-def plot_individual_damage_results(df, df_damaged_reads):
+def plot_individual_damage_results(df, df_damaged_reads, suffix=""):
 
-    filename = Path(f"figures/bayesian/bayesian_individual_damage_results.pdf")
+    filename = Path(f"figures/bayesian/bayesian_individual_damage_results{suffix}.pdf")
     filename.parent.mkdir(parents=True, exist_ok=True)
 
     with PdfPages(filename) as pdf:
@@ -633,7 +636,7 @@ def plot_individual_damage_results(df, df_damaged_reads):
             pdf.savefig(fig)
             plt.close()
 
-    filename = Path(f"figures/MAP/MAP_individual_damage_results.pdf")
+    filename = Path(f"figures/MAP/MAP_individual_damage_results{suffix}.pdf")
     filename.parent.mkdir(parents=True, exist_ok=True)
 
     with PdfPages(filename) as pdf:
@@ -823,9 +826,14 @@ def plot_combined_damage_result(
 #%%
 
 
-def plot_combined_damage_results(df, df_aggregated, df_damaged_reads):
+def plot_combined_damage_results(
+    df,
+    df_aggregated,
+    df_damaged_reads,
+    suffix="",
+):
 
-    filename = Path(f"figures/bayesian/bayesian_combined_damage_results.pdf")
+    filename = Path(f"figures/bayesian/bayesian_combined_damage_results{suffix}.pdf")
     filename.parent.mkdir(parents=True, exist_ok=True)
 
     with PdfPages(filename) as pdf:
@@ -845,7 +853,7 @@ def plot_combined_damage_results(df, df_aggregated, df_damaged_reads):
             pdf.savefig(fig)
             plt.close()
 
-    filename = Path(f"figures/MAP/MAP_combined_damage_results.pdf")
+    filename = Path(f"figures/MAP/MAP_combined_damage_results{suffix}.pdf")
     filename.parent.mkdir(parents=True, exist_ok=True)
 
     with PdfPages(filename) as pdf:
@@ -1750,7 +1758,211 @@ def plot_combined_damage_results_lengths(
 
 # %%
 
-# %%
+
+# def plot_individual_damage_results_contig(
+#     df_in,
+#     group_all_contigs,
+#     df_damaged_reads=None,
+#     x_lim=None,
+#     figsize=(15, 10),
+#     method="Bayesian",
+#     sim_length=60,
+# ):
+
+#     sim_damage = group_all_contigs["sim_damage"].iloc[0]
+#     sim_damage_percent = d_damage_translate[sim_damage]
+#     sim_N_reads = group_all_contigs["sim_N_reads"].iloc[0]
+
+#     all_contigs = df_in["sim_species"].unique()
+#     N_contigs = len(all_contigs)
+
+#     delta = 0.1
+
+#     if method.lower() == "bayesian":
+#         prefix = "Bayesian_"
+#         ylabel = "Bayesian D_max"
+
+#     else:
+#         prefix = ""
+#         ylabel = "D_max (MAP)"
+
+#     fig, axes = plt.subplots(figsize=figsize, nrows=N_contigs, sharex=True)
+
+#     if N_contigs == 1:
+#         axes = [axes]
+
+#     for i, (sim_species, ax) in enumerate(zip(all_contigs, axes)):
+#         # break
+
+#         query = f"sim_species == '{sim_species}'"
+#         group = group_all_contigs.query(query)
+
+#         str_mean_damaged_reads = ""
+#         if df_damaged_reads is not None:
+#             series_damaged_reads = get_damaged_reads(
+#                 df_damaged_reads,
+#                 sim_species=sim_species,
+#                 sim_damage=sim_damage,
+#                 sim_N_reads=sim_N_reads,
+#                 sim_length=sim_length,
+#             )
+#             if len(series_damaged_reads) > 0:
+#                 mean_damaged_reads = series_damaged_reads["frac_damaged"].mean()
+#                 str_mean_damaged_reads = (
+#                     f", {mean_damaged_reads:.1%} damaged reads (mean) in fasta file"
+#                 )
+
+#         ax.set(
+#             ylabel=ylabel,
+#             title=f"Species = {sim_species}{str_mean_damaged_reads}",
+#             ylim=y_limits_individual_damage[sim_damage],
+#         )
+
+#         ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+#         ax.axhline(
+#             sim_damage_percent,
+#             color="k",
+#             linestyle="--",
+#             label=f"{sim_damage_percent:.0%}",
+#         )
+
+#         if len(group) == 0:
+#             continue
+
+#         x = group["sim_seed"]
+
+#         ax.errorbar(
+#             x - delta,
+#             group["Bayesian_D_max"],
+#             group["Bayesian_D_max_std"],
+#             fmt="o",
+#             color="C2",
+#             label="Mean ± std",
+#         )
+
+#         if method.lower() == "bayesian":
+
+#             y, sy = from_low_high_to_errors_corrected(
+#                 group["Bayesian_D_max_confidence_interval_1_sigma_low"],
+#                 group["Bayesian_D_max_median"],
+#                 group["Bayesian_D_max_confidence_interval_1_sigma_high"],
+#             )
+
+#             mask = sy[1, :] >= 0
+#             not_mask = np.logical_not(mask)
+
+#             ax.errorbar(
+#                 x[mask] + delta,
+#                 y[mask],
+#                 sy[:, mask],
+#                 fmt="s",
+#                 capsize=4,
+#                 capthick=1,
+#                 label="Median ± 68% C.I.",
+#                 color="C3",
+#             )
+
+#             y2, sy2 = _from_low_high_to_errors(
+#                 group["Bayesian_D_max_confidence_interval_1_sigma_low"],
+#                 group["Bayesian_D_max_confidence_interval_1_sigma_high"],
+#             )
+
+#             ax.plot(
+#                 x[not_mask] + delta,
+#                 group["Bayesian_D_max_median"].values[not_mask],
+#                 "s",
+#                 color="C3",
+#                 # label="Median",
+#             )
+
+#             ax.errorbar(
+#                 x[not_mask] + delta,
+#                 y2[not_mask],
+#                 sy2[not_mask],
+#                 fmt="None",
+#                 capsize=4,
+#                 capthick=1,
+#                 color="C3",
+#                 # label="68% C.I.",
+#             )
+
+#     ax.set(
+#         xlabel="Iteration",
+#         xlim=(-0.9, 100 - 0.1) if x_lim is None else x_lim,
+#     )
+
+#     fig.suptitle(
+#         f"{ylabel} \n"
+#         f"Individual damages: \n"
+#         f"{sim_N_reads} reads\n"
+#         f"Briggs damage = {sim_damage}\n"
+#         f"Damage percent = {sim_damage_percent:.0%}",
+#     )
+#     fig.subplots_adjust(top=0.82)
+
+#     if method.lower() == "bayesian":
+
+#         try:
+#             handles, labels = axes[0].get_legend_handles_labels()
+#             order = [1, 2, 0]
+#             axes[0].legend(
+#                 [handles[idx] for idx in order], [labels[idx] for idx in order]
+#             )
+#         except IndexError:
+#             s = f"IndexError for sim_damage = {sim_damage}, sim_N_reads = {sim_N_reads}"
+#             print(s)
+
+#     else:
+#         handles, labels = axes[0].get_legend_handles_labels()
+#         order = [1, 0]
+#         axes[0].legend([handles[idx] for idx in order], [labels[idx] for idx in order])
+
+#     return fig
+
+
+# def plot_individual_damage_results_contigs(df_contigs, df_damaged_reads):
+
+#     filename = Path(f"figures/bayesian/bayesian_individual_damage_results_contigs.pdf")
+#     filename.parent.mkdir(parents=True, exist_ok=True)
+
+#     with PdfPages(filename) as pdf:
+
+#         for (sim_damage, sim_N_reads), group_all_contigs in tqdm(
+#             df_contigs.groupby(["sim_damage", "sim_N_reads"])
+#         ):
+
+#             fig = plot_individual_damage_results_contig(
+#                 df_in=df_contigs,
+#                 group_all_contigs=group_all_contigs,
+#                 df_damaged_reads=df_damaged_reads,
+#                 method="Bayesian",
+#             )
+
+#             pdf.savefig(fig)
+#             plt.close()
+
+#     filename = Path(f"figures/MAP/MAP_individual_damage_results_contigs.pdf")
+#     filename.parent.mkdir(parents=True, exist_ok=True)
+
+#     with PdfPages(filename) as pdf:
+
+#         for (sim_damage, sim_N_reads), group_all_contigs in tqdm(
+#             df_contigs.groupby(["sim_damage", "sim_N_reads"])
+#         ):
+
+#             fig = plot_individual_damage_results_contig(
+#                 df_in=df_contigs,
+#                 group_all_contigs=group_all_contigs,
+#                 df_damaged_reads=df_damaged_reads,
+#                 method="MAP",
+#             )
+
+#             pdf.savefig(fig)
+#             plt.close()
+
+
+#%%
 
 # # np.set_printoptions(suppress=True)
 # from scipy.interpolate import griddata

@@ -36,6 +36,9 @@ all_species = [
     "GC-low",
     "GC-mid",
     "GC-high",
+    "contig1k",
+    "contig10k",
+    "contig100k",
 ]
 
 #%%
@@ -46,10 +49,13 @@ df_all = utils.load_multiple_species(all_species)
 
 #%%
 
-df = df_all.query("sim_length == 60 and sim_seed < 100")
+df = df_all.query(
+    f"sim_length == 60 and sim_seed < 100 and sim_species in {all_species[:-3]}"
+)
 
 #%%
 
+x = x
 
 #%%
 
@@ -129,4 +135,33 @@ if make_plots:
         df_homo_99,
         df_aggregated_lengths,
         df_damaged_reads,
+    )
+
+
+#%%
+
+
+df_contigs = df_all.query(f"sim_species in {all_species[-3:]}")
+
+reload(utils)
+if make_plots:
+
+    utils.plot_individual_damage_results(
+        df_contigs,
+        df_damaged_reads,
+        suffix="_contigs",
+    )
+
+# %%
+
+
+df_aggregated_contigs = utils.get_df_aggregated(df_contigs, df_damaged_reads)
+
+reload(utils)
+if make_plots:
+    utils.plot_combined_damage_results(
+        df_contigs,
+        df_aggregated_contigs,
+        df_damaged_reads,
+        suffix="_contigs",
     )
