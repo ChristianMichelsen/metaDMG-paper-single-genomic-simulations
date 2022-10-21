@@ -67,6 +67,8 @@ df_damaged_reads = utils.load_multiple_damaged_reads(all_species)
 
 #%%
 
+# x = x
+
 #%%
 
 reload(utils)
@@ -96,9 +98,6 @@ reload(utils)
 if make_plots:
     utils.plot_contour_lines(df)
 
-# %%
-
-
 #%%
 
 reload(utils)
@@ -107,11 +106,6 @@ df_0 = df_all.query("sim_species == 'homo' and sim_damage == 0 and sim_length ==
 
 if make_plots:
     utils.plot_zero_damage_groups(df_0)
-
-
-#%%
-
-# sns.scatterplot(data=df_0, x="Bayesian_significance", y="Bayesian_D_max")
 
 
 #%%
@@ -132,6 +126,7 @@ if make_plots:
 reload(utils)
 
 df_aggregated_lengths = utils.get_df_aggregated(df_homo_99, df_damaged_reads)
+
 
 if make_plots:
 
@@ -214,29 +209,29 @@ fig, (ax1, ax2) = plt.subplots(figsize=(14, 4), ncols=2)
 reload(utils)
 utils.plot_individual_damage_result(
     df_in=df,
-    group_all_species=group,
+    group_all_keys=group,
     df_damaged_reads=df_damaged_reads,
-    sim_length=60,
     method="Bayesian",
-    all_species=["homo"],
+    splitby="species",
+    keys=["homo"],
     figsize=(6, 4),
     xlim=(-0.5, max_seed - 0.1),
     ylim=(-0.0001, 0.09),
     # fig_title=f"Simulation, {sim_N_reads} reads",
     fig_title=f"",
     ax_titles=False,
-    ax=ax1,
+    ax_in=ax1,
 )
 
 
 reload(utils)
 utils.plot_combined_damage_result(
-    df,
-    group_agg_all_species=group_agg,
+    df_in=df,
+    group_agg_all_keys=group_agg,
     df_damaged_reads=None,
-    sim_length=60,
     method="Bayesian",
-    all_species=["homo"],
+    splitby="species",
+    keys=["homo"],
     figsize=(6, 4),
     fig_title=f"Simulation",
     # xlim=(0.7 * 10**1, 1.3 * 10**5),
@@ -245,16 +240,19 @@ utils.plot_combined_damage_result(
     ylim=(-0.0001, 0.09),
     ax_titles=False,
     delta=0.1,
-    ax=ax2,
+    ax_in=ax2,
 )
 
 
 # ax1.annotate("A)", (0.02, 0.9), xycoords="axes fraction", fontsize=14)
 ax1.set(
-    title=r"A) Homo, $\delta_\mathrm{ss}$ = "
+    title=r"\textbf{A}) Homo, $\delta_\mathrm{ss}$ = "
     f"{sim_damage:.3f}, L = {sim_length}, {sim_N_reads} reads"
 )
-ax2.set(title=r"B) Homo, $\delta_\mathrm{ss}$ = " f"{sim_damage:.3f}, L = {sim_length}")
+ax2.set(
+    title=r"\textbf{B}) Homo, $\delta_\mathrm{ss}$ = "
+    f"{sim_damage:.3f}, L = {sim_length}"
+)
 
 fig.savefig("figures/simulation_overview.pdf")
 
