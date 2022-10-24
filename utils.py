@@ -14,7 +14,7 @@ from tqdm import tqdm
 #%%
 
 
-d_damage_translate = {
+D_DAMAGE = {
     0.0: 0.0,  # np.mean([0.00676 - 0.00526, 0.00413 - 0.00137]),
     0.014: 0.01,  # np.mean([0.01127 - 0.00526, 0.00841 - 0.00137]),
     0.047: 0.02,  # np.mean([0.02163 - 0.00526, 0.01881 - 0.00137]),
@@ -48,6 +48,79 @@ def split_name(name):
 
 def split_name_pd(name):
     return pd.Series(split_name(name), index=sim_columns)
+
+
+#%%
+
+
+def get_df_true_damage_single_path(path):
+
+    species, damage, N_reads, length, seed = split_name(path.stem)
+
+    d = {
+        "sim_species": species,
+        "sim_damage": damage,
+        "sim_N_reads": N_reads,
+        "sim_length": length,
+        "sim_seed": seed,
+    }
+
+    df_forward_reverse = pd.read_csv(path, sep="\t")
+    df_forward = df_forward_reverse.iloc[:50].astype(float)
+    df_reverse = df_forward_reverse.iloc[51:].astype(float).reset_index(drop=True)
+
+    d["C>T(1)"] = df_forward["C>T"][1 - 1]
+    d["C>T(15)"] = df_forward["C>T"][15 - 1]
+    d["C>T(50)"] = df_forward["C>T"][50 - 1]
+    d["C>T_diff"] = d["C>T(1)"] - d["C>T(15)"]
+
+    d["G>A(1)"] = df_reverse["G>A"][1 - 1]
+    d["G>A(15)"] = df_reverse["G>A"][15 - 1]
+    d["G>A(50)"] = df_reverse["G>A"][50 - 1]
+    d["G>A_diff"] = d["G>A(1)"] - d["G>A(15)"]
+
+    d["true_damage"] = np.mean([d["C>T_diff"], d["G>A_diff"]])
+
+    df_true_damage = pd.DataFrame.from_dict(d, orient="index").T
+
+    return df_true_damage
+
+
+def get_df_true_damage():
+
+    paths = Path("true-damage").glob("truedamage-*.txt")
+
+    dfs = []
+    for path in paths:
+        dfs.append(get_df_true_damage_single_path(path))
+
+    df_true_damage = (
+        pd.concat(dfs, axis=0, ignore_index=True)
+        .sort_values(sim_columns)
+        .reset_index(drop=True)
+    )
+
+    return df_true_damage
+
+
+def get_true_damage(
+    sim_damage,
+    sim_species,
+    sim_length,
+):
+
+    query = (
+        "sim_damage == @sim_damage"
+        " & sim_species == @sim_species"
+        " & sim_length == @sim_length"
+    )
+    return df_true_damage.query(query).iloc[0]["true_damage"]
+
+
+df_true_damage = get_df_true_damage()
+
+
+#%%
 
 
 def load_df(data_dir, path_parquet):
@@ -224,12 +297,15 @@ def load_results(species=ALL_SPECIES, use_columns_subset=True):
 
     df["sim_species"] = df["sim_species"].astype("category")
 
-    df["sim_damage_percent"] = df["sim_damage"].map(d_damage_translate)
+    df["sim_damage_percent"] = df["sim_damage"].map(D_DAMAGE)
 
     df["Bayesian_prob_not_zero_damage"] = 1 - df["Bayesian_prob_zero_damage"]
     df["Bayesian_prob_gt_1p_damage"] = 1 - df["Bayesian_prob_lt_1p_damage"]
 
     return df
+
+
+#%%
 
 
 #%%
@@ -302,6 +378,9 @@ def load_multiple_damaged_reads(species):
 #%%
 
 
+#%%
+
+
 def mean_of_CI_halfrange(group):
     s_low = "Bayesian_D_max_confidence_interval_1_sigma_low"
     s_high = "Bayesian_D_max_confidence_interval_1_sigma_high"
@@ -316,6 +395,14 @@ def mean_of_CI_range_high(group):
     return group["Bayesian_D_max_confidence_interval_1_sigma_"].mean()
 
 
+def MAE(x, y):
+    return np.mean(np.abs(x - y))
+
+
+def MAPE(actual, predicted):
+    return np.mean(np.abs((actual - predicted) / actual))
+
+
 def get_df_aggregated(df, df_damaged_reads):
 
     dfg = df.groupby(["sim_species", "sim_length", "sim_damage", "sim_N_reads"])
@@ -327,12 +414,19 @@ def get_df_aggregated(df, df_damaged_reads):
         prefix = "Bayesian_D_max"
         prefix_MAP = "D_max"
 
+        true_damage = get_true_damage(
+            sim_damage,
+            sim_species,
+            sim_length,
+        )
+
         d = {
             "sim_damage": sim_damage,
-            "damage": d_damage_translate[sim_damage],
+            "sim_damage_percent": D_DAMAGE[sim_damage],
             "sim_species": sim_species,
             "sim_length": sim_length,
             "sim_N_reads": sim_N_reads,
+            "true_damage": true_damage,
             "N_simulations": len(group),
             # Bayesian
             f"{prefix}_mean_of_mean": group[f"{prefix}"].mean(),
@@ -347,10 +441,15 @@ def get_df_aggregated(df, df_damaged_reads):
             f"{prefix}_median_of_CI_range_high": group[
                 f"{prefix}_confidence_interval_1_sigma_high"
             ].median(),
+            f"{prefix}_MAE_mean": MAE(true_damage, group[f"{prefix}"]),
+            f"{prefix}_MAE_median": MAE(true_damage, group[f"{prefix}_median"]),
+            f"{prefix}_MAPE_mean": MAPE(true_damage, group[f"{prefix}"]),
+            f"{prefix}_MAPE_median": MAPE(true_damage, group[f"{prefix}_median"]),
             # MAP
             f"{prefix_MAP}_mean_of_mean": group[f"{prefix_MAP}"].mean(),
             f"{prefix_MAP}_std_of_mean": group[f"{prefix_MAP}"].std(),
             f"{prefix_MAP}_mean_of_std": group[f"{prefix_MAP}_std"].mean(),
+            f"{prefix_MAP}_MAE_mean": MAE(group[f"{prefix}"], true_damage),
             # Fit quality, Bayesian
             f"Bayesian_z_mean": group[f"Bayesian_z"].mean(),
             f"Bayesian_z_std": group[f"Bayesian_z"].std(),
@@ -472,10 +571,11 @@ def plot_individual_damage_result(
     ax_titles=True,
     ax_in=None,
     splitby="species",
+    loc="upper right",
 ):
 
     sim_damage = group_all_keys["sim_damage"].iloc[0]
-    sim_damage_percent = d_damage_translate[sim_damage]
+    sim_damage_percent = D_DAMAGE[sim_damage]
     sim_N_reads = group_all_keys["sim_N_reads"].iloc[0]
 
     if method.lower() == "bayesian":
@@ -520,6 +620,12 @@ def plot_individual_damage_result(
         query = f"sim_species == '{sim_species}' and sim_length == {sim_length}"
         group = group_all_keys.query(query)
 
+        true_damage = get_true_damage(
+            sim_damage,
+            sim_species,
+            sim_length,
+        )
+
         str_mean_damaged_reads = ""
         if df_damaged_reads is not None:
             series_damaged_reads = get_damaged_reads(
@@ -547,10 +653,10 @@ def plot_individual_damage_result(
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
         ax.axhline(
-            sim_damage_percent,
+            true_damage,
             color="k",
             linestyle="--",
-            label=f"{sim_damage_percent*100:.0f}" r"\%",
+            label=f"{true_damage*100:.1f}" r"\%",
         )
 
         if len(group) == 0:
@@ -619,14 +725,14 @@ def plot_individual_damage_result(
                 f"Individual damages: \n"
                 f"{sim_N_reads} reads\n"
                 f"Briggs damage = {sim_damage}\n"
-                f"Damage percent = {sim_damage_percent*100:.0f}"
+                f"Damage percent (approx) = {sim_damage_percent*100:.0f}"
                 r"\% "
             )
         else:
             fig.suptitle(fig_title)
         fig.subplots_adjust(top=0.85)
 
-    leg_kws = dict(loc="upper right", markerscale=0.75)
+    leg_kws = dict(loc=loc, markerscale=0.75)
     if method.lower() == "bayesian":
         handles, labels = axes[0].get_legend_handles_labels()
         order = [1, 2, 0]
@@ -704,10 +810,11 @@ def plot_combined_damage_result(
     ax_in=None,
     delta=0.07,
     splitby="species",
+    loc="upper right",
 ):
 
     sim_damage = group_agg_all_keys["sim_damage"].iloc[0]
-    sim_damage_percent = d_damage_translate[sim_damage]
+    sim_damage_percent = D_DAMAGE[sim_damage]
 
     if method.lower() == "bayesian":
         prefix = "Bayesian_"
@@ -747,22 +854,30 @@ def plot_combined_damage_result(
 
         if splitby.lower() == "species":
             sim_species = key
+            title = sim_species
         elif splitby.lower() == "lengths":
             sim_length = key
+            title = sim_length
 
         query = f"sim_species == '{sim_species}' and sim_length == {sim_length}"
         group_agg = group_agg_all_keys.query(query)
 
+        true_damage = get_true_damage(
+            sim_damage,
+            sim_species,
+            sim_length,
+        )
+
         ax.axhline(
-            sim_damage_percent,
+            true_damage,
             color="k",
             linestyle="--",
-            label=f"{sim_damage_percent*100:.0f}" + r"\%",
+            label=f"{true_damage*100:.1f}" + r"\%",
         )
         ax.set_xscale("log")
 
         ax.set(
-            title=f"{splitby.capitalize()} = {sim_species}" if ax_titles else None,
+            title=f"{splitby.capitalize()} = {title}" if ax_titles else None,
             ylabel=ylabel,
             xlim=(0.8 * 10**1, 1.2 * 10**5) if xlim is None else xlim,
             ylim=(0, 0.48) if ylim is None else ylim,
@@ -870,12 +985,12 @@ def plot_combined_damage_result(
             fig.suptitle(
                 f"{ylabel}\n"
                 f"Briggs damage = {sim_damage}\n"
-                f"Damage percent = {sim_damage_percent*100:.0f}" + r"\%",
+                f"Damage percent (approx) = {sim_damage_percent*100:.0f}" + r"\%",
             )
         else:
             fig.suptitle(fig_title)
 
-    leg_kws = dict(loc="upper right", markerscale=0.75)
+    leg_kws = dict(loc=loc, markerscale=0.75)
     if method.lower() == "bayesian":
         handles, labels = axes[0].get_legend_handles_labels()
         order = [1, 2, 0]
@@ -951,6 +1066,98 @@ def plot_combined_damage_results(
 #%%
 
 
+def plot_combined_MAPEs(
+    df_aggregated_homo,
+    method="Bayesian",
+    sim_length=60,
+    figsize=(6, 6),
+    fig_title=None,
+    xlim=None,
+    ylim=None,
+    ax_in=None,
+    delta=0.07,
+):
+
+    if method.lower() == "bayesian":
+        prefix = "Bayesian_"
+        ylabel = r"MAPE"
+    else:
+        prefix = ""
+        ylabel = r"MAPE (MAP)"
+
+    sim_species = "homo"
+    sim_damages = df_aggregated_homo["sim_damage"].unique()
+
+    # N_keys = len(sim_damages)
+
+    if ax_in is None:
+        fig, ax = plt.subplots(
+            # figsize=figsize,
+        )
+    else:
+        ax = ax_in
+
+    for (
+        i,
+        sim_damage,
+    ) in enumerate(sim_damages):
+        # break
+
+        query = f"sim_damage == {sim_damage} and sim_length == {sim_length}"
+        group_agg = df_aggregated_homo.query(query)
+
+        sim_damage_percent = D_DAMAGE[sim_damage]
+
+        true_damage = get_true_damage(
+            sim_damage,
+            sim_species,
+            sim_length,
+        )
+
+        ax.set_xscale("log")
+
+        x = group_agg["sim_N_reads"]
+
+        ax.plot(
+            x * (1 - delta),
+            group_agg[f"{prefix}D_max_MAPE_mean"],
+            "-",
+            color=f"C{i}",
+            label=f"{sim_damage} ({sim_damage_percent*100:.0f}" + r"\%)",
+        )
+
+        # if method.lower() == "bayesian":
+
+        #     ax.plot(
+        #         x * (1 + delta),
+        #         group_agg[f"{prefix}D_max_MAE_median"],
+        #         "o",
+        #         label="MAE (of median D)",
+        #         color="C1",
+        #     )
+
+    ax.set(
+        title=f"Mean Absolute Percentage Error",
+        ylabel=ylabel,
+        xlim=(0.8 * 10**1, 1.2 * 10**5) if xlim is None else xlim,
+        ylim=(0, None) if ylim is None else ylim,
+    )
+
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+    ax.set(xlabel="Number of reads")
+
+    leg_kws = dict(loc="upper right", markerscale=0.75)
+    ax.legend(**leg_kws)
+
+    fig.tight_layout()
+
+    return fig
+
+
+#%%
+
+
 def get_df_frac(df_in, column, cut):
 
     out = []
@@ -966,7 +1173,7 @@ def get_df_frac(df_in, column, cut):
             {
                 "sim_species": sim_species,
                 "sim_damage": sim_damage,
-                "sim_damage_percent": d_damage_translate[sim_damage],
+                "sim_damage_percent": D_DAMAGE[sim_damage],
                 "sim_N_reads": sim_N_reads,
                 "log10_sim_N_reads": np.log10(sim_N_reads),
                 "frac": frac,
@@ -1056,11 +1263,19 @@ def get_contour_settings(cut_type, cuts=None, method="bayesian"):
 def plot_contour_lines_on_ax(
     df,
     ax,
-    contour_settings,
-    sim_species,
+    contour_settings=None,
+    sim_species="homo",
     gaussian_noise=None,
     method="Bayesian",
+    title=None,
+    frac_legend_pos=(1, 0.74),
 ):
+
+    if contour_settings is None:
+        contour_settings = get_contour_settings(
+            "significance",
+            method="Bayesian",
+        )
 
     for cut, color in zip(contour_settings["cuts"], contour_settings["colors"]):
         # break
@@ -1112,9 +1327,9 @@ def plot_contour_lines_on_ax(
 
     ax.set(
         ylabel="Damage",
-        xlabel="N reads",
+        xlabel="Number of reads",
         xscale="log",
-        title=f"Species = {sim_species}",
+        title=f"Species = {sim_species}" if title is None else title,
     )
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
@@ -1149,7 +1364,7 @@ def plot_contour_lines_on_ax(
 
     ax2.legend(
         loc="upper right",
-        bbox_to_anchor=(1, 0.74),
+        bbox_to_anchor=frac_legend_pos,
         frameon=False,
         title="Sim. fraction:",
         alignment="right",
@@ -1253,10 +1468,91 @@ def plot_contour_lines(df):
 #%%
 
 
+# def plot_zero_damage_group(
+#     group_zero_damage,
+#     sim_N_reads,
+#     method="Bayesian",
+# ):
+
+#     if method.lower() == "bayesian":
+#         prefix = "Bayesian_"
+#         title_prefix = "Bayesian "
+#         ncols = 4
+#     else:
+#         prefix = ""
+#         title_prefix = ""
+#         ncols = 3
+
+#     fig, axes = plt.subplots(figsize=(20, 5), ncols=ncols)
+
+#     x0 = group_zero_damage[f"{prefix}D_max"].values
+#     axes[0].hist(
+#         x0,
+#         range=(0, 0.08),
+#         bins=100,
+#         histtype="step",
+#     )
+#     axes[0].set(
+#         xlabel=f"{title_prefix}D-max",
+#         ylabel="Counts",
+#         title=f"Max value: {np.nanmax(x0)*100:.3f}" + r"\%",
+#     )
+#     axes[0].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+#     x1 = group_zero_damage[f"{prefix}significance"].values
+#     axes[1].hist(
+#         x1,
+#         range=(0.2, 1.6),
+#         bins=100,
+#         histtype="step",
+#     )
+#     axes[1].set(
+#         xlabel=f"{title_prefix}significance",
+#         ylabel="Counts",
+#         title=f"Max value: {np.nanmax(x1):.3f}",
+#     )
+
+#     x2 = (group_zero_damage["Bayesian_D_max"] - group_zero_damage["Bayesian_D_max_std"]).values
+#     axes[2].hist(
+#         x2,
+#         range=(-0.15, 0.01),
+#         bins=100,
+#         histtype="step",
+#     )
+#     axes[2].set(
+#         xlabel=f"{title_prefix}(D_max - std)",
+#         ylabel="Counts",
+#         title=f"Max value: {np.nanmax(x2)*100:.3f}" + r"\%",
+#     )
+#     axes[2].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+#     if method.lower() == "bayesian":
+#         x3 = group_zero_damage["Bayesian_D_max_confidence_interval_1_sigma_low"].values
+#         axes[3].hist(
+#             x3,
+#             range=(0, 0.001),
+#             bins=100,
+#             histtype="step",
+#         )
+#         axes[3].set(
+#             xlabel="Bayesian D_max C.I. low",
+#             ylabel="Counts",
+#             title=f"Max value: {np.nanmax(x3)*100:.3f}" + r"\%",
+#         )
+#         axes[3].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+#     fig.suptitle(rf"sim_N_reads = {sim_N_reads}, \# = {len(group_zero_damage)}", fontsize=16)
+#     fig.subplots_adjust(top=0.85)
+
+#     return fig
+
+
 def plot_zero_damage_group(
-    group_0,
-    sim_N_reads,
+    group_zero_damage,
     method="Bayesian",
+    title=None,
+    xlim=None,
+    ylim=None,
 ):
 
     if method.lower() == "bayesian":
@@ -1268,68 +1564,53 @@ def plot_zero_damage_group(
         title_prefix = ""
         ncols = 3
 
-    fig, axes = plt.subplots(figsize=(20, 5), ncols=ncols)
-
-    x0 = group_0[f"{prefix}D_max"].values
-    axes[0].hist(
-        x0,
-        range=(0, 0.08),
-        bins=100,
-        histtype="step",
+    g = sns.jointplot(
+        data=group_zero_damage,
+        x=f"{prefix}significance",
+        y=f"{prefix}D_max",
+        height=4,
+        ratio=5,
+        color="k",
+        alpha=0.5,
+        marker="+",
+        s=25,
+        marginal_kws=dict(bins=30, fill=False),
+        xlim=xlim,
+        ylim=ylim,
+        # marginal_ticks=True,
+        # space=0.5,
     )
-    axes[0].set(
-        xlabel=f"{title_prefix}D-max",
-        ylabel="Counts",
-        title=f"Max value: {np.nanmax(x0)*100:.3f}" + r"\%",
+    g.plot_joint(
+        sns.kdeplot,
+        color="C1",
+        zorder=0,
+        levels=5,
+        alpha=0.5,
     )
-    axes[0].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    # g.plot_marginals(
+    #     sns.rugplot,
+    #     color="k",
+    #     height=-0.1,
+    #     clip_on=False,
+    #     alpha=0.92,
+    # )
 
-    x1 = group_0[f"{prefix}significance"].values
-    axes[1].hist(
-        x1,
-        range=(0.2, 1.6),
-        bins=100,
-        histtype="step",
-    )
-    axes[1].set(
-        xlabel=f"{title_prefix}significance",
-        ylabel="Counts",
-        title=f"Max value: {np.nanmax(x1):.3f}",
-    )
+    g.set_axis_labels(xlabel="Significance", ylabel="Damage")
+    g.ax_joint.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
-    x2 = (group_0["Bayesian_D_max"] - group_0["Bayesian_D_max_std"]).values
-    axes[2].hist(
-        x2,
-        range=(-0.15, 0.01),
-        bins=100,
-        histtype="step",
-    )
-    axes[2].set(
-        xlabel=f"{title_prefix}(D_max - std)",
-        ylabel="Counts",
-        title=f"Max value: {np.nanmax(x2)*100:.3f}" + r"\%",
-    )
-    axes[2].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    # g.ax_joint.grid()
+    # g.ax_marg_x.set_yscale("log")
+    # g.ax_marg_y.set_xscale("log")
 
-    if method.lower() == "bayesian":
-        x3 = group_0["Bayesian_D_max_confidence_interval_1_sigma_low"].values
-        axes[3].hist(
-            x3,
-            range=(0, 0.001),
-            bins=100,
-            histtype="step",
-        )
-        axes[3].set(
-            xlabel="Bayesian D_max C.I. low",
-            ylabel="Counts",
-            title=f"Max value: {np.nanmax(x3)*100:.3f}" + r"\%",
-        )
-        axes[3].xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    if title is None or title == "":
+        pass
+    else:
+        g.fig.suptitle(title, fontsize=16)
+        g.fig.subplots_adjust(top=0.85)
 
-    fig.suptitle(rf"sim_N_reads = {sim_N_reads}, \# = {len(group_0)}", fontsize=16)
-    fig.subplots_adjust(top=0.85)
+    g.fig.tight_layout()
 
-    return fig
+    return g
 
 
 #%%
@@ -1342,15 +1623,15 @@ def plot_zero_damage_groups(df_0):
 
     with PdfPages(filename) as pdf:
 
-        for sim_N_reads, group_0 in tqdm(df_0.groupby("sim_N_reads")):
+        for sim_N_reads, group_zero_damage in tqdm(df_0.groupby("sim_N_reads")):
             # break
 
             fig = plot_zero_damage_group(
-                group_0,
-                sim_N_reads,
+                group_zero_damage,
                 method="Bayesian",
+                title=rf"sim_N_reads = {sim_N_reads}, \# = {len(group_zero_damage)}",
             )
-            pdf.savefig(fig)
+            pdf.savefig(fig.fig)
             plt.close()
 
     filename = Path(f"figures/MAP/MAP_zero_damage_plots.pdf")
@@ -1358,17 +1639,17 @@ def plot_zero_damage_groups(df_0):
 
     with PdfPages(filename) as pdf:
 
-        for sim_N_reads, group_0 in tqdm(df_0.groupby("sim_N_reads")):
+        for sim_N_reads, group_zero_damage in tqdm(df_0.groupby("sim_N_reads")):
 
             # if sim_N_reads == 25000:
             #     break
 
             fig = plot_zero_damage_group(
-                group_0,
-                sim_N_reads,
+                group_zero_damage,
                 method="MAP",
+                title=rf"sim_N_reads = {sim_N_reads}, \# = {len(group_zero_damage)}",
             )
-            pdf.savefig(fig)
+            pdf.savefig(fig.fig)
             plt.close()
 
 
@@ -1423,182 +1704,6 @@ def plot_individual_damage_results_lengths(df_homo_99, df_damaged_reads):
 #%%
 
 
-# def plot_combined_damage_results_length(
-#     df_in,
-#     group_agg_all_lengths,
-#     df_damaged_reads=None,
-#     sim_species="homo",
-#     method="Bayesian",
-# ):
-
-#     sim_damage = group_agg_all_lengths["sim_damage"].iloc[0]
-#     sim_damage_percent = d_damage_translate[sim_damage]
-
-#     all_lengths = df_in["sim_length"].unique()
-#     N_length = len(all_lengths)
-
-#     delta = 0.07
-
-#     if method.lower() == "bayesian":
-#         prefix = "Bayesian_"
-#         ylabel = "Bayesian D_max"
-
-#     else:
-#         prefix = ""
-#         ylabel = "D_max (MAP)"
-
-#     fig, axes = plt.subplots(figsize=(15, 12), nrows=N_length, sharex=True)
-#     for i, (sim_length, ax) in enumerate(zip(all_lengths, axes)):
-#         # break
-
-#         query = f"sim_species == '{sim_species}' and sim_length == {sim_length}"
-#         group_agg = group_agg_all_lengths.query(query)
-
-#         ax.axhline(
-#             sim_damage_percent,
-#             color="k",
-#             linestyle="--",
-#             label=f"{sim_damage_percent*100:.0f}" r"\%",
-#         )
-#         ax.set_xscale("log")
-
-#         ax.set(
-#             title=f"Mean Fragment Length = {sim_length}",
-#             ylabel=ylabel,
-#             ylim=(0, 0.48),
-#         )
-
-#         ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-
-#         if len(group_agg) == 0:
-#             continue
-
-#         x = group_agg["sim_N_reads"]
-
-#         ax.errorbar(
-#             x * (1 - delta),
-#             group_agg[f"{prefix}D_max_mean_of_mean"],
-#             group_agg[f"{prefix}D_max_mean_of_std"],
-#             fmt="o",
-#             # capsize=4,
-#             # capthick=1,
-#             label="Mean of mean ± mean of std",
-#             color="C0",
-#         )
-
-#         if method.lower() == "bayesian":
-
-#             y, sy = from_low_high_to_errors_corrected(
-#                 group_agg["Bayesian_D_max_median_of_CI_range_low"],
-#                 group_agg["Bayesian_D_max_median_of_median"],
-#                 group_agg["Bayesian_D_max_median_of_CI_range_high"],
-#             )
-
-#             mask = sy[1, :] >= 0
-#             not_mask = np.logical_not(mask)
-
-#             ax.errorbar(
-#                 x.values[mask] * (1 + delta),
-#                 y[mask],
-#                 sy[:, mask],
-#                 fmt="s",
-#                 capsize=4,
-#                 capthick=1,
-#                 label="Median of median ± median of CI (16%-84%)",
-#                 color="C1",
-#             )
-
-#             y2, sy2 = _from_low_high_to_errors(
-#                 group_agg["Bayesian_D_max_median_of_CI_range_low"],
-#                 group_agg["Bayesian_D_max_median_of_CI_range_high"],
-#             )
-
-#             ax.plot(
-#                 x[not_mask] * (1 + delta),
-#                 y[not_mask],
-#                 "s",
-#                 color="C1",
-#                 # label="Median of median",
-#             )
-
-#             ax.errorbar(
-#                 x[not_mask] * (1 + delta),
-#                 y2[not_mask],
-#                 sy2[not_mask],
-#                 fmt="None",
-#                 capsize=4,
-#                 capthick=1,
-#                 color="C1",
-#                 # label="Median of CI (16%-84%)",
-#             )
-
-#         if df_damaged_reads is not None:
-
-#             for sim_N_reads, group_agg_N_reads in group_agg.groupby("sim_N_reads"):
-#                 # break
-
-#                 series_damaged_reads = get_damaged_reads(
-#                     df_damaged_reads,
-#                     sim_species=sim_species,
-#                     sim_damage=sim_damage,
-#                     sim_length=sim_length,
-#                     sim_N_reads=sim_N_reads,
-#                 )
-
-#                 str_mean_damaged_reads = ""
-#                 if len(series_damaged_reads) > 0:
-#                     mean_damaged_reads = series_damaged_reads["frac_damaged"].mean()
-#                     str_mean_damaged_reads = f"{mean_damaged_reads*100:.1f}" r"\%"
-
-#                 top1 = (
-#                     group_agg_N_reads[f"{prefix}D_max_mean_of_mean"]
-#                     + group_agg_N_reads[f"{prefix}D_max_mean_of_std"]
-#                 )
-#                 if method.lower() == "bayesian":
-#                     top2 = group_agg_N_reads["Bayesian_D_max_median_of_CI_range_high"]
-#                     y = max([top1.iloc[0], top2.iloc[0]])
-#                 else:
-#                     y = top1.iloc[0]
-
-#                 ax.text(
-#                     sim_N_reads,
-#                     y * 1.02,
-#                     str_mean_damaged_reads,
-#                     ha="center",
-#                     va="bottom",
-#                     fontsize=6,
-#                 )
-
-#     ax.set(xlabel="N_reads")
-#     fig.suptitle(
-#         f"{ylabel}\n"
-#         f"Briggs damage = {sim_damage}\n"
-#         f"Damage percent = {sim_damage_percent*100:.0f}"
-#         r"\%",
-#     )
-
-#     if method.lower() == "bayesian":
-
-#         try:
-#             handles, labels = axes[0].get_legend_handles_labels()
-#             order = [1, 2, 0]
-#             axes[0].legend(
-#                 [handles[idx] for idx in order], [labels[idx] for idx in order]
-#             )
-
-#         except IndexError:
-#             print(f"IndexError for sim_damage = {sim_damage}")
-#     else:
-#         handles, labels = axes[0].get_legend_handles_labels()
-#         order = [1, 0]
-#         axes[0].legend([handles[idx] for idx in order], [labels[idx] for idx in order])
-
-#     return fig
-
-
-#%%
-
-
 def plot_combined_damage_results_lengths(
     df_homo_99,
     df_aggregated_lengths,
@@ -1647,209 +1752,6 @@ def plot_combined_damage_results_lengths(
 
 
 # %%
-
-
-# def plot_individual_damage_results_contig(
-#     df_in,
-#     group_all_contigs,
-#     df_damaged_reads=None,
-#     xlim=None,
-#     figsize=(15, 10),
-#     method="Bayesian",
-#     sim_length=60,
-# ):
-
-#     sim_damage = group_all_contigs["sim_damage"].iloc[0]
-#     sim_damage_percent = d_damage_translate[sim_damage]
-#     sim_N_reads = group_all_contigs["sim_N_reads"].iloc[0]
-
-#     all_contigs = df_in["sim_species"].unique()
-#     N_contigs = len(all_contigs)
-
-#     delta = 0.1
-
-#     if method.lower() == "bayesian":
-#         prefix = "Bayesian_"
-#         ylabel = "Bayesian D_max"
-
-#     else:
-#         prefix = ""
-#         ylabel = "D_max (MAP)"
-
-#     fig, axes = plt.subplots(figsize=figsize, nrows=N_contigs, sharex=True)
-
-#     if N_contigs == 1:
-#         axes = [axes]
-
-#     for i, (sim_species, ax) in enumerate(zip(all_contigs, axes)):
-#         # break
-
-#         query = f"sim_species == '{sim_species}'"
-#         group = group_all_contigs.query(query)
-
-#         str_mean_damaged_reads = ""
-#         if df_damaged_reads is not None:
-#             series_damaged_reads = get_damaged_reads(
-#                 df_damaged_reads,
-#                 sim_species=sim_species,
-#                 sim_damage=sim_damage,
-#                 sim_N_reads=sim_N_reads,
-#                 sim_length=sim_length,
-#             )
-#             if len(series_damaged_reads) > 0:
-#                 mean_damaged_reads = series_damaged_reads["frac_damaged"].mean()
-#                 str_mean_damaged_reads = (
-#                     f", {mean_damaged_reads:.1%} damaged reads (mean) in fasta file"
-#                 )
-
-#         ax.set(
-#             ylabel=ylabel,
-#             title=f"Species = {sim_species}{str_mean_damaged_reads}",
-#             ylim=y_limits_individual_damage[sim_damage],
-#         )
-
-#         ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-
-#         ax.axhline(
-#             sim_damage_percent,
-#             color="k",
-#             linestyle="--",
-#             label=f"{sim_damage_percent:.0%}",
-#         )
-
-#         if len(group) == 0:
-#             continue
-
-#         x = group["sim_seed"]
-
-#         ax.errorbar(
-#             x - delta,
-#             group["Bayesian_D_max"],
-#             group["Bayesian_D_max_std"],
-#             fmt="o",
-#             color="C0",
-#             label="Mean ± std",
-#         )
-
-#         if method.lower() == "bayesian":
-
-#             y, sy = from_low_high_to_errors_corrected(
-#                 group["Bayesian_D_max_confidence_interval_1_sigma_low"],
-#                 group["Bayesian_D_max_median"],
-#                 group["Bayesian_D_max_confidence_interval_1_sigma_high"],
-#             )
-
-#             mask = sy[1, :] >= 0
-#             not_mask = np.logical_not(mask)
-
-#             ax.errorbar(
-#                 x[mask] + delta,
-#                 y[mask],
-#                 sy[:, mask],
-#                 fmt="s",
-#                 capsize=4,
-#                 capthick=1,
-#                 label="Median ± 68% C.I.",
-#                 color="C1",
-#             )
-
-#             y2, sy2 = _from_low_high_to_errors(
-#                 group["Bayesian_D_max_confidence_interval_1_sigma_low"],
-#                 group["Bayesian_D_max_confidence_interval_1_sigma_high"],
-#             )
-
-#             ax.plot(
-#                 x[not_mask] + delta,
-#                 group["Bayesian_D_max_median"].values[not_mask],
-#                 "s",
-#                 color="C1",
-#                 # label="Median",
-#             )
-
-#             ax.errorbar(
-#                 x[not_mask] + delta,
-#                 y2[not_mask],
-#                 sy2[not_mask],
-#                 fmt="None",
-#                 capsize=4,
-#                 capthick=1,
-#                 color="C1",
-#                 # label="68% C.I.",
-#             )
-
-#     ax.set(
-#         xlabel="Iteration",
-#         xlim=(-0.9, 100 - 0.1) if xlim is None else xlim,
-#     )
-
-#     fig.suptitle(
-#         f"{ylabel} \n"
-#         f"Individual damages: \n"
-#         f"{sim_N_reads} reads\n"
-#         f"Briggs damage = {sim_damage}\n"
-#         f"Damage percent = {sim_damage_percent:.0%}",
-#     )
-#     fig.subplots_adjust(top=0.82)
-
-#     if method.lower() == "bayesian":
-
-#         try:
-#             handles, labels = axes[0].get_legend_handles_labels()
-#             order = [1, 2, 0]
-#             axes[0].legend(
-#                 [handles[idx] for idx in order], [labels[idx] for idx in order]
-#             )
-#         except IndexError:
-#             s = f"IndexError for sim_damage = {sim_damage}, sim_N_reads = {sim_N_reads}"
-#             print(s)
-
-#     else:
-#         handles, labels = axes[0].get_legend_handles_labels()
-#         order = [1, 0]
-#         axes[0].legend([handles[idx] for idx in order], [labels[idx] for idx in order])
-
-#     return fig
-
-
-# def plot_individual_damage_results_contigs(df_contigs, df_damaged_reads):
-
-#     filename = Path(f"figures/bayesian/bayesian_individual_damage_results_contigs.pdf")
-#     filename.parent.mkdir(parents=True, exist_ok=True)
-
-#     with PdfPages(filename) as pdf:
-
-#         for (sim_damage, sim_N_reads), group_all_contigs in tqdm(
-#             df_contigs.groupby(["sim_damage", "sim_N_reads"])
-#         ):
-
-#             fig = plot_individual_damage_results_contig(
-#                 df_in=df_contigs,
-#                 group_all_contigs=group_all_contigs,
-#                 df_damaged_reads=df_damaged_reads,
-#                 method="Bayesian",
-#             )
-
-#             pdf.savefig(fig)
-#             plt.close()
-
-#     filename = Path(f"figures/MAP/MAP_individual_damage_results_contigs.pdf")
-#     filename.parent.mkdir(parents=True, exist_ok=True)
-
-#     with PdfPages(filename) as pdf:
-
-#         for (sim_damage, sim_N_reads), group_all_contigs in tqdm(
-#             df_contigs.groupby(["sim_damage", "sim_N_reads"])
-#         ):
-
-#             fig = plot_individual_damage_results_contig(
-#                 df_in=df_contigs,
-#                 group_all_contigs=group_all_contigs,
-#                 df_damaged_reads=df_damaged_reads,
-#                 method="MAP",
-#             )
-
-#             pdf.savefig(fig)
-#             plt.close()
 
 
 #%%

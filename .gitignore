@@ -2,6 +2,7 @@
 /genome/
 /bam/
 /fasta/
+/true-damage/
 
 __pycache__
 /.cache/*

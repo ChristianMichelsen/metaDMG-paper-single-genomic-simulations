@@ -40,16 +40,29 @@ else
 fi
 
 
+
+# "0.035": 1%
+# "0.065": 2%
+# "0.162": 5%
+# "0.31": 10%
+# "0.472": 15%
+# "0.633": 20%
+# "0.96": 30%
+
 if [ "$quick" = true ] ; then
-    declare -a damages=("0.0" "0.303")
-    declare -a Nreads=("100" "1000")
+    declare -a damages=("0.162")
+    # declare -a Nreads=("100" "1000")
+    declare -a Nreads=("1000000")
     declare -a length_means=("60")
+    declare -a length_means=("35" "60" "90")
     ids=`seq 0 1`
+    cores=1
 
 else
-    declare -a damages=("0.0" "0.014" "0.047" "0.138" "0.303" "0.466" "0.626" "0.96")
-    # declare -a Nreads=("10" "25" "50" "100" "250" "500" "1000" "2500" "5000" "10000" "25000" "50000" "100000")
-    declare -a Nreads=("10" "100" "1000" "10000" "100000")
+    # declare -a damages=("0.0" "0.035" "0.065" "0.162" "0.31" "0.472" "0.633" "0.96")
+    declare -a damages=("0.035" "0.065" "0.162" "0.31" "0.472" "0.633")
+    declare -a Nreads=("10" "25" "50" "100" "250" "500" "1000" "2500" "5000" "10000" "25000" "50000" "100000")
+    # declare -a Nreads=("10" "100" "1000" "10000" "100000")
     declare -a length_means=("60")
     #declare -a length_means=("35" "60" "90")
     ids=`seq 0 99`
@@ -105,6 +118,7 @@ function simulate_fastq {
         lognorm_std=$(compute_lognormal_std)
 
         # args="-i $genome -t $threads -r $Nread -ld LogNorm,$lognorm_mean,$lognorm_std -s $id -seq SE -f fq -q1 $quality_scores $briggs -o $fastq"
+        # args="-i $genome -t $threads -r $Nread -ld LogNorm,$lognorm_mean,$lognorm_std -seq SE -f fa $briggs -o $fastq"
         args="-i $genome -t $threads -r $Nread -ld LogNorm,$lognorm_mean,$lognorm_std -seq SE -f fq -q1 $quality_scores $briggs -o $fastq"
         ./ngsngs $args
         # echo ./ngsngs $args
