@@ -48,8 +48,7 @@ all_species = [
 
 #%%
 
-reload(utils)
-
+# reload(utils)
 df_all = utils.load_multiple_species(all_species)
 
 #%%
@@ -60,14 +59,14 @@ df = df_all.query(
 
 #%%
 
-reload(utils)
 
+# reload(utils)
 df_damaged_reads = utils.load_multiple_damaged_reads(all_species)
 
 
 #%%
-reload(utils)
 
+# reload(utils)
 df_true_damage = utils.df_true_damage
 
 #%%
@@ -76,7 +75,7 @@ df_true_damage = utils.df_true_damage
 
 #%%
 
-reload(utils)
+# reload(utils)
 if make_plots:
     utils.plot_individual_damage_results(
         df,
@@ -86,13 +85,13 @@ if make_plots:
 
 #%%
 
-reload(utils)
+# reload(utils)
 df_aggregated = utils.get_df_aggregated(df, df_damaged_reads)
 
 
 # %%
 
-reload(utils)
+# reload(utils)
 if make_plots:
     utils.plot_combined_damage_results(
         df,
@@ -106,7 +105,7 @@ if make_plots:
 
 df_aggregated_homo = df_aggregated.query("sim_species == 'homo'")
 
-reload(utils)
+# reload(utils)
 if make_plots:
     fig = utils.plot_combined_MAPEs(
         df_aggregated_homo,
@@ -117,7 +116,7 @@ if make_plots:
 
 # %%
 
-reload(utils)
+# reload(utils)
 if make_plots:
     utils.plot_contour_lines(df)
 
@@ -125,7 +124,7 @@ if make_plots:
 #%%
 
 
-reload(utils)
+# reload(utils)
 if make_plots:
 
     fig, ax = plt.subplots(figsize=(3.5, 3))
@@ -148,8 +147,7 @@ if make_plots:
 
 #%%
 
-reload(utils)
-
+# reload(utils)
 df_zero_damage = df_all.query(
     "sim_species == 'homo' and sim_damage == 0 and sim_length == 60"
 )
@@ -162,7 +160,7 @@ if make_plots:
 
 df_homo_99 = df_all.query("sim_species == 'homo' and sim_seed < 100")
 
-reload(utils)
+# reload(utils)
 if make_plots:
 
     utils.plot_individual_damage_results_lengths(
@@ -173,7 +171,7 @@ if make_plots:
 
 #%%
 
-reload(utils)
+# reload(utils)
 
 df_aggregated_lengths = utils.get_df_aggregated(df_homo_99, df_damaged_reads)
 
@@ -191,7 +189,7 @@ if make_plots:
 
 df_contigs = df_all.query(f"sim_species in {all_species[-3:]}")
 
-reload(utils)
+# reload(utils)
 if make_plots:
 
     utils.plot_individual_damage_results(
@@ -205,7 +203,7 @@ if make_plots:
 
 df_aggregated_contigs = utils.get_df_aggregated(df_contigs, df_damaged_reads)
 
-reload(utils)
+# reload(utils)
 if make_plots:
     utils.plot_combined_damage_results(
         df_contigs,
