@@ -61,32 +61,38 @@ df = df_all.query(
 
 
 # reload(utils)
-df_damaged_reads = utils.load_multiple_damaged_reads(all_species)
-
-
-#%%
-
-# reload(utils)
-df_true_damage = utils.df_true_damage
-
-#%%
-
-# x = x
+# df_damaged_reads = utils.load_multiple_damaged_reads(all_species)
+df_damaged_reads = None
 
 #%%
 
 # reload(utils)
+df_true_damage = utils.get_df_true_damage()
+
+
+#%%
+
+x = x
+
+#%%
+
+reload(utils)
 if make_plots:
     utils.plot_individual_damage_results(
-        df,
-        df_damaged_reads,
+        df=df,
+        df_true_damage=df_true_damage,
+        df_damaged_reads=df_damaged_reads,
     )
 
 
 #%%
 
-# reload(utils)
-df_aggregated = utils.get_df_aggregated(df, df_damaged_reads)
+reload(utils)
+df_aggregated = utils.get_df_aggregated(
+    df_in=df,
+    df_true_damage=df_true_damage,
+    df_damaged_reads=df_damaged_reads,
+)
 
 
 # %%
@@ -94,9 +100,10 @@ df_aggregated = utils.get_df_aggregated(df, df_damaged_reads)
 # reload(utils)
 if make_plots:
     utils.plot_combined_damage_results(
-        df,
-        df_aggregated,
-        df_damaged_reads,
+        df=df,
+        df_aggregated=df_aggregated,
+        df_true_damage=df_true_damage,
+        df_damaged_reads=df_damaged_reads,
     )
 
 
@@ -105,18 +112,19 @@ if make_plots:
 
 df_aggregated_homo = df_aggregated.query("sim_species == 'homo'")
 
-# reload(utils)
+reload(utils)
 if make_plots:
-    fig = utils.plot_combined_MAPEs(
-        df_aggregated_homo,
+    fig = utils.plot_combined_MAEs(
+        df_aggregated_homo=df_aggregated_homo,
+        df_true_damage=df_true_damage,
         method="Bayesian",
-        ylim=(0, 1),
+        # ylim=(0, 2),
     )
 
 
 # %%
 
-# reload(utils)
+reload(utils)
 if make_plots:
     utils.plot_contour_lines(df)
 
@@ -160,27 +168,33 @@ if make_plots:
 
 df_homo_99 = df_all.query("sim_species == 'homo' and sim_seed < 100")
 
-# reload(utils)
+reload(utils)
 if make_plots:
 
     utils.plot_individual_damage_results_lengths(
-        df_homo_99,
-        df_damaged_reads,
+        df_homo_99=df_homo_99,
+        df_true_damage=df_true_damage,
+        df_damaged_reads=df_damaged_reads,
     )
 
 
 #%%
 
-# reload(utils)
+reload(utils)
 
-df_aggregated_lengths = utils.get_df_aggregated(df_homo_99, df_damaged_reads)
+df_aggregated_lengths = utils.get_df_aggregated(
+    df_in=df_homo_99,
+    df_true_damage=df_true_damage,
+    df_damaged_reads=df_damaged_reads,
+)
 
 if make_plots:
 
     utils.plot_combined_damage_results_lengths(
-        df_homo_99,
-        df_aggregated_lengths,
-        df_damaged_reads,
+        df_homo_99=df_homo_99,
+        df_aggregated_lengths=df_aggregated_lengths,
+        df_true_damage=df_true_damage,
+        df_damaged_reads=df_damaged_reads,
     )
 
 
@@ -189,35 +203,41 @@ if make_plots:
 
 df_contigs = df_all.query(f"sim_species in {all_species[-3:]}")
 
-# reload(utils)
+reload(utils)
 if make_plots:
 
     utils.plot_individual_damage_results(
-        df_contigs,
-        df_damaged_reads,
+        df=df_contigs,
+        df_true_damage=df_true_damage,
+        df_damaged_reads=df_damaged_reads,
         suffix="_contigs",
     )
 
 # %%
 
+reload(utils)
 
-df_aggregated_contigs = utils.get_df_aggregated(df_contigs, df_damaged_reads)
+df_aggregated_contigs = utils.get_df_aggregated(
+    df_in=df_contigs,
+    df_true_damage=df_true_damage,
+    df_damaged_reads=df_damaged_reads,
+)
 
 # reload(utils)
 if make_plots:
     utils.plot_combined_damage_results(
-        df_contigs,
-        df_aggregated_contigs,
-        df_damaged_reads,
+        df=df_contigs,
+        df_aggregated=df_aggregated_contigs,
+        df_true_damage=df_true_damage,
+        df_damaged_reads=df_damaged_reads,
         suffix="_contigs",
     )
 
 
 #%%
 
-
 sim_species = "homo"
-sim_damage = 0.047
+sim_damage = 0.065
 sim_N_reads = 100
 sim_length = 60
 max_seed = 10
@@ -251,6 +271,7 @@ if make_plots:
     utils.plot_individual_damage_result(
         df_in=df,
         group_all_keys=group,
+        df_true_damage=df_true_damage,
         df_damaged_reads=df_damaged_reads,
         method="Bayesian",
         splitby="species",
@@ -269,6 +290,7 @@ if make_plots:
     utils.plot_combined_damage_result(
         df_in=df,
         group_agg_all_keys=group_agg,
+        df_true_damage=df_true_damage,
         df_damaged_reads=None,
         method="Bayesian",
         splitby="species",
