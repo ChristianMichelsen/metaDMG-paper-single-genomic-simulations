@@ -265,7 +265,7 @@ group_agg = df_aggregated.query(
 
 if make_plots:
 
-    fig, (ax1, ax2) = plt.subplots(figsize=(10, 3.3), ncols=2)
+    fig, (ax1, ax2) = plt.subplots(figsize=(10, 3.5), ncols=2)
 
     reload(utils)
     utils.plot_individual_damage_result(
@@ -276,9 +276,8 @@ if make_plots:
         method="Bayesian",
         splitby="species",
         keys=["homo"],
-        figsize=(6, 4),
         xlim=(-0.5, max_seed - 0.1),
-        ylim=(-0.0001, 0.09),
+        ylim=(-0.0001, 0.15),
         # fig_title=f"Simulation, {sim_N_reads} reads",
         fig_title=f"",
         ax_titles=False,
@@ -295,27 +294,28 @@ if make_plots:
         method="Bayesian",
         splitby="species",
         keys=["homo"],
-        figsize=(6, 4),
         fig_title=f"Simulation",
-        # xlim=(0.7 * 10**1, 1.3 * 10**5),
         xlim=(0.7 * 10**2, 1.3 * 10**5),
-        # ylim=(-0.0001, 0.18),
-        ylim=(-0.0001, 0.09),
+        ylim=(-0.0001, 0.06),
         ax_titles=False,
         delta=0.1,
         ax_in=ax2,
-        loc="upper left",
+        loc="upper right",
     )
 
     # ax1.annotate("A)", (0.02, 0.9), xycoords="axes fraction", fontsize=14)
-    ax1.set(
-        title=r"\textbf{A}) Homo, $\delta_\mathrm{ss}$ = "
-        f"{sim_damage:.3f}, L = {sim_length}, {sim_N_reads} reads"
+    ax1.set_title(
+        r"\textbf{A}) Homo, $\delta_\mathrm{ss}$ = "
+        f"{sim_damage:.3f}, L = {sim_length}, {sim_N_reads} reads",
+        pad=15,
     )
-    ax2.set(
-        title=r"\textbf{B}) Homo, $\delta_\mathrm{ss}$ = "
-        f"{sim_damage:.3f}, L = {sim_length}"
+    ax2.set_title(
+        r"\textbf{B}) Homo, $\delta_\mathrm{ss}$ = "
+        f"{sim_damage:.3f}, L = {sim_length}",
+        pad=15,
     )
+
+    fig.tight_layout()
 
     fig.savefig("figures/ngsngs_overview.pdf", bbox_inches="tight")
 
