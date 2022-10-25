@@ -1450,14 +1450,18 @@ def plot_contour_line(
     for i, (sim_species, ax) in enumerate(zip(all_species, axes)):
         # break
 
-        plot_contour_lines_on_ax(
-            df,
-            ax=ax,
-            contour_settings=contour_settings,
-            sim_species=sim_species,
-            gaussian_noise=gaussian_noise,
-            method=method,
-        )
+        try:
+            plot_contour_lines_on_ax(
+                df,
+                ax=ax,
+                contour_settings=contour_settings,
+                sim_species=sim_species,
+                gaussian_noise=gaussian_noise,
+                method=method,
+            )
+        except TypeError:
+            pass
+
 
     fig.suptitle(contour_settings["figure_title"], fontsize=16)
     fig.subplots_adjust(top=0.85)
