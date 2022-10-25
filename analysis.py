@@ -72,7 +72,7 @@ df_true_damage = utils.get_df_true_damage()
 
 #%%
 
-x = x
+# x = x
 
 #%%
 
