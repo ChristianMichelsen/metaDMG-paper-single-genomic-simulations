@@ -21,7 +21,8 @@ legend.labelspacing: 0.4
 axes.titlesize: 16
 axes.labelsize: 12
 # axes.prop_cycle: (cycler('color', ["80b1d3", "fb8072", "b3de69", "bc80bd", "ffed6f", "8dd3c7", "fdb462", "fccde5", "bebada", "ccebc5", "d9d9d9"]))
-axes.prop_cycle: (cycler('color', ["59b8fa", "fb8072", "6fc276", "b36fb5", "ffe73c", "68c5b5", "fda849", "f99dcc", "9f99c8", "abde9f", "c0c0c0"]))
+# axes.prop_cycle: (cycler('color', ["59b8fa", "fb8072", "58df06", "b36fb5",  "c0c0c0", "ffe73c", "9f99c8", "f99dcc","abde9f", "fda849",  "68c5b5"]))
+axes.prop_cycle: (cycler('color', ["3BA0E7", "E7554C", "00B050", "b36fb5",  "c0c0c0", "FFC000", "9f99c8", "f99dcc","abde9f", "fda849",  "68c5b5"]))
 axes.titlelocation: center
 axes.formatter.use_mathtext: True
 axes.autolimit_mode: round_numbers
