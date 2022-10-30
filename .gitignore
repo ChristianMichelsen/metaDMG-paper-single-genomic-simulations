@@ -20,3 +20,4 @@ old*
 results.zip
 damaged_reads*.txt
 config*.yaml
+pydamage/*

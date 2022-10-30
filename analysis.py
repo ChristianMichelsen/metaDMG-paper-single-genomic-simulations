@@ -67,7 +67,7 @@ df_damaged_reads = None
 #%%
 
 # reload(utils)
-df_true_damage = utils.get_df_true_damage()
+df_known_damage = utils.get_df_known_damage()
 
 
 #%%
@@ -78,9 +78,10 @@ df_true_damage = utils.get_df_true_damage()
 
 reload(utils)
 if make_plots:
+    print("Plotting individual damage")
     utils.plot_individual_damage_results(
         df=df,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         df_damaged_reads=df_damaged_reads,
     )
 
@@ -90,7 +91,7 @@ if make_plots:
 reload(utils)
 df_aggregated = utils.get_df_aggregated(
     df_in=df,
-    df_true_damage=df_true_damage,
+    df_known_damage=df_known_damage,
     df_damaged_reads=df_damaged_reads,
 )
 
@@ -99,10 +100,11 @@ df_aggregated = utils.get_df_aggregated(
 
 # reload(utils)
 if make_plots:
+    print("Plotting combined damage")
     utils.plot_combined_damage_results(
         df=df,
         df_aggregated=df_aggregated,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         df_damaged_reads=df_damaged_reads,
     )
 
@@ -116,7 +118,7 @@ reload(utils)
 if make_plots:
     fig = utils.plot_combined_MAEs(
         df_aggregated_homo=df_aggregated_homo,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         method="Bayesian",
         # ylim=(0, 2),
     )
@@ -126,6 +128,7 @@ if make_plots:
 
 reload(utils)
 if make_plots:
+    print("Plotting contour lines")
     utils.plot_contour_lines(df)
 
 
@@ -135,6 +138,7 @@ if make_plots:
 # reload(utils)
 if make_plots:
 
+    reload(utils)
     fig, ax = plt.subplots(figsize=(3.5, 3))
 
     utils.plot_contour_lines_on_ax(
@@ -144,6 +148,11 @@ if make_plots:
         method="Bayesian",
         title="",
         frac_legend_pos=(1, 0.60),
+        fill_contour=True,
+        fill_cut_value=4,
+        # fill_cut_value=2,
+        fill_level_value=0.95,
+        # fill_level_value=0.5,
     )
 
     ax.set(xlim=(20, 1.2 * 10**5))
@@ -156,6 +165,7 @@ if make_plots:
 #%%
 
 # reload(utils)
+
 df_zero_damage = df_all.query(
     "sim_species == 'homo' and sim_damage == 0 and sim_length == 60"
 )
@@ -171,9 +181,10 @@ df_homo_99 = df_all.query("sim_species == 'homo' and sim_seed < 100")
 reload(utils)
 if make_plots:
 
+    print("Plotting individual damage lengths")
     utils.plot_individual_damage_results_lengths(
         df_homo_99=df_homo_99,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         df_damaged_reads=df_damaged_reads,
     )
 
@@ -184,16 +195,17 @@ reload(utils)
 
 df_aggregated_lengths = utils.get_df_aggregated(
     df_in=df_homo_99,
-    df_true_damage=df_true_damage,
+    df_known_damage=df_known_damage,
     df_damaged_reads=df_damaged_reads,
 )
 
 if make_plots:
 
+    print("Plotting combined damage lengths")
     utils.plot_combined_damage_results_lengths(
         df_homo_99=df_homo_99,
         df_aggregated_lengths=df_aggregated_lengths,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         df_damaged_reads=df_damaged_reads,
     )
 
@@ -206,9 +218,10 @@ df_contigs = df_all.query(f"sim_species in {all_species[-3:]}")
 reload(utils)
 if make_plots:
 
+    print("Plotting individual damage: contigs")
     utils.plot_individual_damage_results(
         df=df_contigs,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         df_damaged_reads=df_damaged_reads,
         suffix="_contigs",
     )
@@ -219,16 +232,17 @@ reload(utils)
 
 df_aggregated_contigs = utils.get_df_aggregated(
     df_in=df_contigs,
-    df_true_damage=df_true_damage,
+    df_known_damage=df_known_damage,
     df_damaged_reads=df_damaged_reads,
 )
 
 # reload(utils)
 if make_plots:
+    print("Plotting combined damage: contigs")
     utils.plot_combined_damage_results(
         df=df_contigs,
         df_aggregated=df_aggregated_contigs,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         df_damaged_reads=df_damaged_reads,
         suffix="_contigs",
     )
@@ -237,17 +251,18 @@ if make_plots:
 #%%
 
 sim_species = "homo"
-sim_damage = 0.065
+sim_damage = 0.31
 sim_N_reads = 100
 sim_length = 60
-max_seed = 10
+min_seed = 60
+max_seed = 80
 
 group = df.query(
     f"sim_species == '{sim_species}'"
     f" and sim_damage == {sim_damage}"
     f" and sim_length == {sim_length}"
     f" and sim_N_reads == {sim_N_reads}"
-    f" and sim_seed < {max_seed}"
+    f" and {min_seed} <= sim_seed < {max_seed}"
 )
 
 
@@ -262,56 +277,91 @@ group_agg = df_aggregated.query(
 
 #%%
 
+import arviz as az
+from scipy.stats import beta as sp_beta
+from scipy.stats import betabinom as sp_betabinom
+from scipy.stats import norm as sp_norm
 
+posterior = az.from_netcdf("sim-homo-0.31-100-60-69.nc").posterior
+
+
+A = posterior["A"].values[0]
+phi = posterior["phi"].values[0]
+N = 16
+mu = np.mean(A)
+stds = np.sqrt(A * (1 - A) * (phi + N) / ((phi + 1) * N))
+std = np.mean(stds)
+
+
+#%%
+
+fig, ax = plt.subplots()
+xmin, xmax = 0, 0.18
+Nbins = 50
+ax.hist(A, Nbins, range=(xmin, xmax), density=True, histtype="step", label=r"$\bar{D}$")
+ax.hist(
+    stds, Nbins, range=(xmin, xmax), density=True, histtype="step", label=r"$\sigma_D$"
+)
+ax.set(xlim=(xmin, xmax))
+ax.legend()
+
+#%%
 if make_plots:
 
     fig, (ax1, ax2) = plt.subplots(figsize=(10, 3.5), ncols=2)
+
+    ymin, ymax = -0.0001, 0.25
 
     reload(utils)
     utils.plot_individual_damage_result(
         df_in=df,
         group_all_keys=group,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         df_damaged_reads=df_damaged_reads,
         method="Bayesian",
         splitby="species",
         keys=["homo"],
-        xlim=(-0.5, max_seed - 0.1),
-        ylim=(-0.0001, 0.15),
+        xlim=(min_seed - 0.5, max_seed - 0.1),
+        ylim=(ymin, ymax),
         # fig_title=f"Simulation, {sim_N_reads} reads",
         fig_title=f"",
         ax_titles=False,
         ax_in=ax1,
-        loc="upper left",
+        # loc="upper left",
+        bbox_to_anchor=None,
+        ncols=1,
+        markerscale=0.7,
     )
 
     reload(utils)
     utils.plot_combined_damage_result(
         df_in=df,
         group_agg_all_keys=group_agg,
-        df_true_damage=df_true_damage,
+        df_known_damage=df_known_damage,
         df_damaged_reads=None,
         method="Bayesian",
         splitby="species",
         keys=["homo"],
         fig_title=f"Simulation",
-        xlim=(0.7 * 10**2, 1.3 * 10**5),
-        ylim=(-0.0001, 0.06),
+        # xlim=(0.7 * 10**2, 1.3 * 10**5),
+        xlim=(0.7 * 10, 1.3 * 10**5),
+        ylim=(ymin, ymax),
         ax_titles=False,
         delta=0.1,
         ax_in=ax2,
         loc="upper right",
+        markerscale=0.7,
     )
 
     # ax1.annotate("A)", (0.02, 0.9), xycoords="axes fraction", fontsize=14)
     ax1.set_title(
         r"\textbf{A}) Homo, $\delta_\mathrm{ss}$ = "
-        f"{sim_damage:.3f}, L = {sim_length}, {sim_N_reads} reads",
+        f"{sim_damage:.2f}, L = {sim_length}, {sim_N_reads} reads",
         pad=15,
     )
     ax2.set_title(
         r"\textbf{B}) Homo, $\delta_\mathrm{ss}$ = "
-        f"{sim_damage:.3f}, L = {sim_length}",
+        f"{sim_damage:.2f}, L = {sim_length}",
         pad=15,
     )
 
@@ -322,16 +372,241 @@ if make_plots:
 
 #%%
 
-group_zero_damage = df_zero_damage.query("sim_N_reads == 100")
+group_zero_damage = df_zero_damage.query("sim_N_reads == 1000")
 
 reload(utils)
+
 g = utils.plot_zero_damage_group(
     group_zero_damage,
     method="Bayesian",
     title="",
-    xlim=(0.25, 0.8),
-    ylim=(0.004, 0.0185),
+    xlim=(0.1, 0.9),
+    ylim=(0.0, 0.008),
 )
 
-g.savefig("figures/zero_damage_100_reads.pdf")
+g.savefig("figures/zero_damage_1000_reads.pdf")
+# %%
+
+
+#%%
+
+
+def parse_pydamage_name(name):
+    _, species, damage, N_reads, L, seed = name.split("-")
+    return species, float(damage), int(N_reads), int(L), int(seed.split(".")[0])
+
+
+def load_pydamage_results():
+
+    if Path("pydamage/pydamage.parquet").exists():
+        df = pd.read_parquet("pydamage/pydamage.parquet")
+
+    else:
+
+        paths = Path("pydamage") / "homo"
+
+        dfs = []
+        for path in tqdm(list(paths.glob("*.csv"))):
+            df = pd.read_csv(path)
+
+            sim_data = parse_pydamage_name(path.stem)
+            for i, col in enumerate(utils.simulation_columns):
+                df[col] = sim_data[i]
+
+            dfs.append(df)
+
+        df = (
+            pd.concat(dfs)
+            .drop(columns=["reference"])
+            .sort_values(["sim_damage", "sim_N_reads", "sim_seed"])
+            .reset_index(drop=True)
+        )
+        df["sim_damage_percent_approx"] = df["sim_damage"].map(utils.D_DAMAGE_APPROX)
+        df["D_max"] = df["damage_model_pmax"]
+        df["D_max_std"] = df["damage_model_pmax_stdev"]
+        df["significance"] = df["D_max"] / df["D_max_std"]
+
+        df.to_parquet("pydamage/pydamage.parquet")
+
+    return df
+
+
+df_pydamage = load_pydamage_results().query("sim_length == 60")
+
+#%%
+
+x = x
+
+# %%
+
+
+df_pydamage_100 = df_pydamage.query("sim_seed < 100").copy()
+df_metaDMG_100 = df_all.query(
+    "sim_species == 'homo' & sim_length == 60 & sim_seed < 100"
+).copy()
+
+
+df_pydamage_100["method"] = "pydamage"
+df_metaDMG_100["method"] = "metaDMG"
+
+cols = utils.simulation_columns + [
+    "sim_damage_percent_approx",
+    "D_max",
+    "D_max_std",
+    "significance",
+    "method",
+]
+df_combined = pd.concat([df_pydamage_100[cols], df_metaDMG_100[cols]])
+
+
+#%%
+
+
+df_metaDMG_100.sim_damage_percent_approx = df_metaDMG_100.sim_damage_percent_approx.astype("category")
+
+
+sns.relplot(
+    data=df_metaDMG_100,
+    x="significance",
+    y="D_max",
+    hue="sim_damage_percent_approx",
+    style="sim_N_reads",
+    kind="scatter",
+)
+
+
+#%%
+
+import itertools
+
+sim_damages = df_metaDMG_100.sim_damage.unique()
+sim_N_reads = df_metaDMG_100.sim_N_reads.unique()
+
+it = itertools.product(sim_damages, sim_N_reads)
+for sim_damage, sim_N_reads in it:
+    # print(sim_damage, sim_N_reads)
+    if sim_damage == 0.162 and sim_N_reads == 100:
+        break
+
+
+group_pydamage = df_pydamage_100.query(
+    f"sim_N_reads == {sim_N_reads} and sim_damage == {sim_damage}"
+).copy()
+
+group_metaDMG = df_metaDMG_100.query(
+    f"sim_N_reads == {sim_N_reads} and sim_damage == {sim_damage}"
+).copy()
+
+group_pydamage["method"] = "pydamage"
+group_metaDMG["method"] = "metaDMG"
+
+cols = ["D_max", "D_max_std", "significance", "method"]
+group_combined = pd.concat([group_pydamage[cols], group_metaDMG[cols]])
+
+prefix = ""
+ncols = 3
+xlabel = "Significance (MAP)"
+ylabel = "Damage (MAP)"
+
+
+#%%
+
+g = sns.jointplot(
+    data=group_combined,
+    x=f"{prefix}significance",
+    y=f"{prefix}D_max",
+    hue="method",
+    height=4,
+    ratio=5,
+    alpha=0.5,
+    marker="+",
+    # marker=".",
+    s=25,
+    # marginal_kws=dict(bins=30, fill=False),
+    # xlim=xlim,
+    # ylim=ylim,
+    # marginal_ticks=True,
+    # space=0.5,
+)
+
+
+g.plot_joint(
+    sns.kdeplot,
+    # color="C1",
+    zorder=0,
+    levels=1,
+    alpha=0.5,
+)
+
+
+sim_N_reads = 100
+group_pydamage = df_pydamage_100.query(
+    f"sim_N_reads == {sim_N_reads} and sim_damage == {sim_damage}"
+).copy()
+
+group_metaDMG = df_metaDMG_100.query(
+    f"sim_N_reads == {sim_N_reads} and sim_damage == {sim_damage}"
+).copy()
+
+group_pydamage["method"] = "pydamage"
+group_metaDMG["method"] = "metaDMG"
+
+cols = ["D_max", "D_max_std", "significance", "method"]
+group_combined = pd.concat([group_pydamage[cols], group_metaDMG[cols]])
+
+
+g.plot_joint(
+    sns.kdeplot,
+    # color="C1",
+    zorder=0,
+    levels=1,
+    alpha=0.5,
+)
+
+
+g.set_axis_labels(xlabel=xlabel, ylabel=ylabel)
+g.ax_joint.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+
+#%%
+
+df_pydamage_zero_damage = df_pydamage.query(
+    "sim_species == 'homo' and sim_damage == 0 and sim_length == 60"
+)
+
+df_metaDMG_zero_damage = df_all.query(
+    "sim_species == 'homo' and sim_damage == 0 and sim_length == 60"
+)
+
+
+#%%
+
+for sim_N_reads in df_metaDMG_zero_damage.sim_N_reads.unique():
+    break
+
+
+group_pydamage_zero_damage = df_pydamage_zero_damage.query(
+    f"sim_N_reads == {sim_N_reads}"
+)
+
+group_metaDMG_zero_damage = df_metaDMG_zero_damage.query(
+    f"sim_N_reads == {sim_N_reads}"
+)
+
+reload(utils)
+
+fig = utils.plot_zero_damage_group(
+    group_metaDMG_zero_damage,
+    method="MAP",
+    title="metaDMG. \n"
+    rf"sim_N_reads = {sim_N_reads}, \# = {len(group_metaDMG_zero_damage)}",
+)
+
+fig = utils.plot_zero_damage_group(
+    group_pydamage_zero_damage,
+    method="MAP",
+    title="pydamage. \n"
+    rf"sim_N_reads = {sim_N_reads}, \# = {len(group_pydamage_zero_damage)}",
+)
+
 # %%
