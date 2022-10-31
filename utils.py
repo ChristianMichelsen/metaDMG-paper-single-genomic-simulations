@@ -1586,6 +1586,7 @@ def plot_zero_damage_group(
     title=None,
     xlim=None,
     ylim=None,
+    ax=None,
 ):
 
     if method.lower() == "bayesian":
