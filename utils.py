@@ -1935,3 +1935,250 @@ def plot_combined_damage_results_lengths(
 # # g.tight_layout()
 
 # g.figure.savefig(f"figures/comparison_{species}_pairgrid.pdf")
+
+
+#%%
+
+
+d_xlim = {
+    0.0: (0, 10),
+    0.01: (0, 10),
+    0.02: (0, 10),
+    0.05: (0, 10),
+    0.1: (0, 20),
+    0.15: (0, 30),
+    0.20: (0, 50),
+    0.30: (0, 100),
+}
+d_ylim = {
+    0.0: (0, 0.03),
+    0.01: (0, 0.12),
+    0.02: (0, 0.12),
+    0.05: (0, 0.2),
+    0.1: (0.0, 0.3),
+    0.15: (0.0, 0.4),
+    0.20: (0.0, 0.4),
+    0.30: (0.0, 0.5),
+}
+
+
+def plot_pydamage_comparison(
+    group,
+    df_known_damage,
+    sim_damage,
+    sim_species,
+    sim_N_reads,
+    sim_length,
+):
+
+    sim_damage_percent_approx = D_DAMAGE_APPROX[sim_damage]
+
+    xlim = d_xlim[sim_damage_percent_approx]
+    ylim = d_ylim[sim_damage_percent_approx]
+
+    known_damage = get_known_damage(
+        df_known_damage=df_known_damage,
+        sim_damage=sim_damage,
+        sim_species=sim_species,
+        sim_length=sim_length,
+    )
+
+    d_markers = {"pydamage": "v", "metaDMG": "o"}
+
+    fig, ax = plt.subplots()
+
+    for method in ["pydamage", "metaDMG"]:
+        data = group.query(f"method == '{method}'")
+
+        ax.scatter(
+            data[f"significance"],
+            data[f"D_max"],
+            s=10,
+            marker=d_markers[method],
+            label=f"{method}",
+            clip_on=True,
+        )
+
+    ax.axhline(
+        known_damage,
+        color="k",
+        linestyle="--",
+        label=r"$D_\mathrm{known} = " f"{known_damage*100:.1f}" r"\%$",
+    )
+
+    ax.set(
+        xlabel="Significance (MAP)",
+        ylabel="Damage (MAP)",
+        xlim=xlim,
+        ylim=ylim,
+    )
+
+    title = f"{sim_N_reads} reads\n" f"Briggs damage = {sim_damage}\n"
+    ax.set_title(title, pad=30, fontsize=12, loc="left")
+
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+    ax.spines.right.set_visible(True)
+    ax.spines.top.set_visible(True)
+
+    leg_kws = dict(
+        markerscale=1.5,
+        bbox_to_anchor=(1, 1.1),
+        loc="upper right",
+        ncols=3,
+    )
+    handles, labels = ax.get_legend_handles_labels()
+    order = [1, 0, 2]
+    ax.legend(
+        [handles[idx] for idx in order],
+        [labels[idx] for idx in order],
+        **leg_kws,
+    )
+
+    return fig
+
+
+#%%
+
+
+def f_forward(xs, cuts):
+    out = []
+
+    for x in xs:
+        y = x
+        for i_cut in range(len(cuts) - 1):
+            if cuts[i_cut] <= x < cuts[i_cut + 1]:
+                y = i_cut + (x - cuts[i_cut]) / (cuts[i_cut + 1] - cuts[i_cut])
+                break
+
+        out.append(y)
+    return np.array(out)
+
+
+def f_reverse(xs, cuts):
+
+    cuts_x_forward = f_forward(cuts[:-1], cuts)
+
+    out = []
+    for x in xs:
+        y = x
+        for i_cut in range(len(cuts_x_forward) - 1):
+            if cuts_x_forward[i_cut] <= x < cuts_x_forward[i_cut + 1]:
+                y = (x - i_cut) * (cuts[i_cut + 1] - cuts[i_cut]) + cuts[i_cut]
+                break
+        out.append(y)
+    return out
+
+
+cuts_significance = np.array([0, 1, 2, 3, 4, 5, 10, 100, 1000, np.inf])
+
+functions_significance = [
+    lambda xs: f_forward(xs, cuts_significance),
+    lambda xs: f_reverse(xs, cuts_significance),
+]
+
+
+cuts_damage = np.array([0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.10, 0.20, 0.5, 1])
+
+functions_damage = [
+    lambda xs: f_forward(xs, cuts_damage),
+    lambda xs: f_reverse(xs, cuts_damage),
+]
+
+
+#%%
+
+
+def plot_pydamage_comparison_zero_damage(sim_N_reads, group_zero_damage):
+
+    fig, axes = plt.subplots(ncols=2, sharey=False, figsize=(8, 3))
+    ax1, ax2 = axes
+
+    for method, ax in zip(["metaDMG", "pydamage"], axes):
+
+        data = group_zero_damage.query(f"method == '{method}'")
+        mask = (data[f"significance"] > 2) & (data[f"D_max"] > 0.01)
+
+        ax.scatter(data[f"significance"][mask], data[f"D_max"][mask], s=10, color="C1")
+        ax.scatter(
+            data[f"significance"][~mask], data[f"D_max"][~mask], s=10, color="C2"
+        )
+
+        title = f"{method}: {sim_N_reads} reads"
+        ax.set_title(title, pad=10, fontsize=12, loc="left")
+
+        ax.set_xscale("function", functions=functions_significance)
+        ax.set_xticks(cuts_significance[:-1])
+
+        ax.set_yscale("function", functions=functions_damage)
+        ax.set_yticks(cuts_damage[:-1])
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+        # ax.grid()
+
+    xlim = (0, 1000)
+    ylim = (0, 0.5)
+    ax1.set(
+        xlabel="Significance (MAP)",
+        ylabel="Damage (MAP)",
+        xlim=xlim,
+        ylim=ylim,
+    )
+    ax2.set(
+        xlabel="Significance (MAP)",
+        xlim=xlim,
+        ylim=ylim,
+    )
+
+    for ax in axes:
+        kwargs = dict(
+            color="C1",
+            linestyle="--",
+            alpha=0.3,
+            linewidth=1,
+        )
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        ax.plot([2, xlim[1]], [0.01, 0.01], **kwargs)
+        ax.plot([2, 2], [0.01, ylim[1]], **kwargs)
+        ax.set(xlim=xlim)
+
+        ax.fill_between(
+            [2, xlim[1]],
+            [0.01, 0.01],
+            [ylim[1], ylim[1]],
+            color="C1",
+            alpha=0.1,
+        )
+
+        ax.fill_between(
+            [0, 2, 2, xlim[1]],
+            [ylim[1], ylim[1], 0.01, 0.01],
+            color="C2",
+            alpha=0.1,
+        )
+
+        d = 0.5  # proportion of vertical to horizontal extent of the slanted line
+        kwargs = dict(
+            markersize=5,
+            linestyle="none",
+            color="k",
+            mec="k",
+            mew=1,
+            clip_on=False,
+        )
+        ax.plot(
+            [0, 0],
+            [0.060, 0.055],
+            marker=[(-1, d), (1, -d)],
+            **kwargs,
+        )
+
+        ax.plot(
+            [5, 5.5],
+            [0.0, 0.0],
+            marker=[(-0.5, d), (0.5, -d)],
+            **kwargs,
+        )
+
+    return fig
