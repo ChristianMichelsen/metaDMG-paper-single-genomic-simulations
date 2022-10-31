@@ -460,23 +460,33 @@ cols = utils.simulation_columns + [
     "significance",
     "method",
 ]
-df_combined = pd.concat([df_pydamage_100[cols], df_metaDMG_100[cols]])
+
+
+df_combined = pd.concat(
+    [
+        df_pydamage_100[cols + ["predicted_accuracy", "qvalue"]],
+        df_metaDMG_100[cols],
+    ]
+)
 
 
 #%%
 
 
-filename = Path(f"figures/pydamage_comparison.pdf")
+filename = Path(f"figures/pydamage_comparison_special_axis.pdf")
 filename.parent.mkdir(parents=True, exist_ok=True)
 
 with PdfPages(filename) as pdf:
 
-    it = tqdm(
-        df_combined.query("sim_damage > 0").groupby(["sim_damage", "sim_N_reads"])
-    )
+    it = tqdm(df_combined.groupby(["sim_damage", "sim_N_reads"]))
 
     for (sim_damage, sim_N_reads), group in it:
+        # break
 
+        if sim_N_reads == 100 and sim_damage == 0.472:
+            break
+
+        reload(utils)
         fig = utils.plot_pydamage_comparison(
             group=group,
             df_known_damage=df_known_damage,
@@ -484,6 +494,7 @@ with PdfPages(filename) as pdf:
             sim_species=sim_species,
             sim_N_reads=sim_N_reads,
             sim_length=sim_length,
+            use_special_axis=True,
         )
 
         pdf.savefig(fig, bbox_inches="tight")
@@ -506,10 +517,19 @@ df_pydamage_zero_damage.sort_values("pvalue")
 
 
 df_pydamage_zero_damage_cut = df_pydamage_zero_damage.query(
-    # "predicted_accuracy > 0.67 and pvalue < 0.05"
-    # "predicted_accuracy > 0.67"
-    "pvalue < 0.05"
+    "pvalue < 0.05 and predicted_accuracy > 0.67"
 )
+
+df_pydamage_zero_damage_cut = df_pydamage_zero_damage.query(
+    "pvalue < 0.05 and predicted_accuracy > 0.50 and D_max > 0.01"
+    # "pvalue < 0.05 and predicted_accuracy > 0.50"
+)
+
+
+df_pydamage_zero_damage_cut100 = df_pydamage_zero_damage.query("sim_N_reads == 100")
+df_pydamage_zero_damage_cut500 = df_pydamage_zero_damage.query("sim_N_reads == 500")
+df_pydamage_zero_damage_cut500.sort_values("pvalue")
+
 
 # sns.scatterplot(data=df_pydamage_zero_damage_cut, x="predicted_accuracy", y="damage_model_pmax")
 

@@ -1941,24 +1941,24 @@ def plot_combined_damage_results_lengths(
 
 
 d_xlim = {
-    0.0: (0, 10),
-    0.01: (0, 10),
-    0.02: (0, 10),
-    0.05: (0, 10),
-    0.1: (0, 20),
-    0.15: (0, 30),
-    0.20: (0, 50),
-    0.30: (0, 100),
+    0.0: (0, 40),
+    0.01: (0, 40),
+    0.02: (0, 40),
+    0.05: (0, 50),
+    0.1: (0, 50),
+    0.15: (0, 60),
+    0.20: (0, 100),
+    0.30: (0, 200),
 }
 d_ylim = {
-    0.0: (0, 0.03),
-    0.01: (0, 0.12),
-    0.02: (0, 0.12),
+    0.0: (0, 0.1),
+    0.01: (0, 0.2),
+    0.02: (0, 0.2),
     0.05: (0, 0.2),
-    0.1: (0.0, 0.3),
-    0.15: (0.0, 0.4),
-    0.20: (0.0, 0.4),
-    0.30: (0.0, 0.5),
+    0.1: (0.0, 0.4),
+    0.15: (0.0, 0.6),
+    0.20: (0.0, 0.6),
+    0.30: (0.0, 1.0),
 }
 
 
@@ -1969,6 +1969,7 @@ def plot_pydamage_comparison(
     sim_species,
     sim_N_reads,
     sim_length,
+    use_special_axis=False,
 ):
 
     sim_damage_percent_approx = D_DAMAGE_APPROX[sim_damage]
@@ -1983,21 +1984,48 @@ def plot_pydamage_comparison(
         sim_length=sim_length,
     )
 
-    d_markers = {"pydamage": "v", "metaDMG": "o"}
-
     fig, ax = plt.subplots()
 
-    for method in ["pydamage", "metaDMG"]:
-        data = group.query(f"method == '{method}'")
+    data = group.query(f"method == 'metaDMG'")
+    mask = (data.D_max >= 0.01) & (data.significance >= 2)
 
-        ax.scatter(
-            data[f"significance"],
-            data[f"D_max"],
-            s=10,
-            marker=d_markers[method],
-            label=f"{method}",
-            clip_on=True,
-        )
+    ax.scatter(
+        data[mask][f"significance"],
+        data[mask][f"D_max"],
+        s=10,
+        marker="*",
+        label="metaDMG (damaged)",
+        color="C0",
+    )
+    ax.scatter(
+        data[~mask][f"significance"],
+        data[~mask][f"D_max"],
+        s=10,
+        marker="x",
+        label="metaDMG (non-damaged)",
+        color="C0",
+    )
+
+    data = group.query(f"method == 'pydamage'")
+    mask = (data.predicted_accuracy > 0.5) & (data.qvalue < 0.05)
+
+    ax.scatter(
+        data[mask][f"significance"],
+        data[mask][f"D_max"],
+        s=10,
+        marker="*",
+        label="PyDamage (damaged)",
+        color="C2",
+    )
+
+    ax.scatter(
+        data[~mask][f"significance"],
+        data[~mask][f"D_max"],
+        s=10,
+        marker="x",
+        label="PyDamage (non-damaged)",
+        color="C1",
+    )
 
     ax.axhline(
         known_damage,
@@ -2005,6 +2033,18 @@ def plot_pydamage_comparison(
         linestyle="--",
         label=r"$D_\mathrm{known} = " f"{known_damage*100:.1f}" r"\%$",
     )
+
+    if use_special_axis:
+        ax.set_xscale("function", functions=functions_significance)
+        ax.set_xticks(cuts_significance[:-1])
+
+        ax.set_yscale("function", functions=functions_damage)
+        ax.set_yticks(cuts_damage[:-1])
+
+        xlim = (0, 1000)
+        ylim = (0, 1.0)
+
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
     ax.set(
         xlabel="Significance (MAP)",
@@ -2016,24 +2056,76 @@ def plot_pydamage_comparison(
     title = f"{sim_N_reads} reads\n" f"Briggs damage = {sim_damage}\n"
     ax.set_title(title, pad=30, fontsize=12, loc="left")
 
-    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-
     ax.spines.right.set_visible(True)
     ax.spines.top.set_visible(True)
 
     leg_kws = dict(
         markerscale=1.5,
-        bbox_to_anchor=(1, 1.1),
+        bbox_to_anchor=(1, 1.35),
         loc="upper right",
-        ncols=3,
+        ncols=1,
     )
-    handles, labels = ax.get_legend_handles_labels()
-    order = [1, 0, 2]
-    ax.legend(
-        [handles[idx] for idx in order],
-        [labels[idx] for idx in order],
-        **leg_kws,
-    )
+
+    ax.legend(**leg_kws)
+
+    if use_special_axis:
+        kwargs = dict(
+            color="C2",
+            linestyle="--",
+            alpha=0.3,
+            linewidth=1,
+        )
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        ax.plot([2, xlim[1]], [0.01, 0.01], **kwargs)
+        ax.plot([2, 2], [0.01, ylim[1]], **kwargs)
+        ax.set(xlim=xlim)
+
+        ax.fill_between(
+            [2, xlim[1]],
+            [0.01, 0.01],
+            [ylim[1], ylim[1]],
+            color="C2",
+            alpha=0.1,
+        )
+
+        ax.fill_between(
+            [0, 2, 2, xlim[1]],
+            [ylim[1], ylim[1], 0.01, 0.01],
+            color="C1",
+            alpha=0.1,
+        )
+
+        d = 0.5  # proportion of vertical to horizontal extent of the slanted line
+        kwargs = dict(
+            markersize=5,
+            linestyle="none",
+            color="k",
+            mec="k",
+            mew=1,
+            clip_on=False,
+        )
+        ax.plot(
+            [0, 0],
+            [0.060, 0.055],
+            marker=[(-1, d), (1, -d)],
+            **kwargs,
+        )
+
+        ax.plot(
+            [5, 5.5],
+            [0.0, 0.0],
+            marker=[(-0.5, d), (0.5, -d)],
+            **kwargs,
+        )
+
+    # handles, labels = ax.get_legend_handles_labels()
+    # order = [1, 0, 2]
+    # ax.legend(
+    #     [handles[idx] for idx in order],
+    #     [labels[idx] for idx in order],
+    #     **leg_kws,
+    # )
 
     return fig
 
@@ -2078,7 +2170,7 @@ functions_significance = [
 ]
 
 
-cuts_damage = np.array([0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.10, 0.20, 0.5, 1])
+cuts_damage = np.array([0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.10, 0.20, 0.5, 1, np.inf])
 
 functions_damage = [
     lambda xs: f_forward(xs, cuts_damage),
@@ -2131,6 +2223,7 @@ def plot_pydamage_comparison_zero_damage(sim_N_reads, group_zero_damage):
     )
 
     for ax in axes:
+
         kwargs = dict(
             color="C1",
             linestyle="--",
