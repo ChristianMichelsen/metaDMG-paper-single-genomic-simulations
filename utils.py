@@ -1,15 +1,22 @@
 #%%
 from pathlib import Path
 
+import matplotlib as mpl
+import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.colors import LogNorm
+from matplotlib.path import Path as mpl_Path
 from scipy.ndimage import gaussian_filter
 from scipy.stats import norm as sp_norm
 from tqdm import tqdm
+
+#%%
+
 
 #%%
 
@@ -60,8 +67,8 @@ simulation_columns = [
 def split_name(name):
     splitted = name.split("-")
     damage, N_reads, length, seed = splitted[-4:]
-    species = "-".join(splitted[1:-4])
-    return species, float(damage), int(N_reads), int(length), int(seed)
+    specie = "-".join(splitted[1:-4])
+    return specie, float(damage), int(N_reads), int(length), int(seed)
 
 
 def split_name_pd(name):
@@ -73,10 +80,10 @@ def split_name_pd(name):
 
 def get_df_known_damage_single_path(path):
 
-    species, damage, N_reads, length, seed = split_name(path.stem)
+    specie, damage, N_reads, length, seed = split_name(path.stem)
 
     d = {
-        "sim_species": species,
+        "sim_species": specie,
         "sim_damage": damage,
         "sim_N_reads": N_reads,
         "sim_length": length,
@@ -192,21 +199,21 @@ ALL_SPECIES = [
 ]
 
 
-def get_data_dir(species):
-    if species in ALL_SPECIES:
-        return Path("data") / species
-    raise AssertionError(f"Unknown species: {species}")
+def get_data_dir(specie):
+    if specie in ALL_SPECIES:
+        return Path("data") / specie
+    raise AssertionError(f"Unknown specie: {specie}")
 
 
-def get_damaged_reads_path(species):
-    if species in ALL_SPECIES:
-        return f"damaged_reads_{species}.txt"
-    raise AssertionError(f"Unknown species: {species}")
+def get_damaged_reads_path(specie):
+    if specie in ALL_SPECIES:
+        return f"damaged_reads_{specie}.txt"
+    raise AssertionError(f"Unknown specie: {specie}")
 
 
-def load_results(species=ALL_SPECIES, use_columns_subset=True):
+def load_results(specie=ALL_SPECIES, use_columns_subset=True):
 
-    data_dir = get_data_dir(species)
+    data_dir = get_data_dir(specie)
     path_parquet = data_dir / "df.parquet"
     df = load_df(data_dir, path_parquet)
     if df is None:
@@ -333,8 +340,10 @@ def load_results(species=ALL_SPECIES, use_columns_subset=True):
 
 
 def load_multiple_species(species=ALL_SPECIES):
+
     if not (isinstance(species, list) or isinstance(species, tuple)):
         species = [species]
+
     dfs = []
     for specie in species:
         df = load_results(specie)
@@ -2275,3 +2284,377 @@ def plot_pydamage_comparison_zero_damage(sim_N_reads, group_zero_damage):
         )
 
     return fig
+
+
+#%%
+
+
+def add_colors(group):
+    bad_color = -1
+    mask = (group.D_max < 0.01) | (group.significance < 2)
+    colors = mask * bad_color + (1 - mask) * (group.significance)
+    group["colors"] = colors
+    return group.sort_values("colors", ascending=True, inplace=False)
+
+
+#%%
+
+
+def make_parallel_plots(
+    group,
+    sim_damage,
+    sim_N_reads,
+    percentage_columns=None,
+    smooth_lines=True,
+    d_names=None,
+    cmap=None,
+    norm=None,
+):
+
+    sim_damage_percent = D_DAMAGE_APPROX[sim_damage]
+    title = rf"sim_N_reads: {sim_N_reads}, Damage: {sim_damage_percent*100:.1f}\%"
+
+    if d_names is None:
+        d_names = {
+            "D_max": r"$D$",
+            "damage_model_pmax": r"$p_\mathrm{max}$",
+            "significance": r"$Z$",
+            "predicted_accuracy": r"$\mathrm{Acc}_\mathrm{pred}$",
+            "qvalue": r"$q$",
+        }
+
+    if cmap is None:
+        cmap = plt.get_cmap("cividis")
+        cmap.set_bad(color="k", alpha=0.2)
+    if norm is None:
+        norm = LogNorm(vmin=2, vmax=50)
+
+    ys = group[d_names.keys()].values
+    N = len(ys)
+    ys.shape
+
+    # organize the data
+    ymins = ys.min(axis=0)
+    ymaxs = ys.max(axis=0)
+    dys = ymaxs - ymins
+    ymins -= dys * 0.05  # add 5% padding below and above
+    ymaxs += dys * 0.05
+
+    if percentage_columns is None:
+        percentage_columns = {
+            "D_max",
+            "damage_model_pmax",
+            "predicted_accuracy",
+            "qvalue",
+        }
+    percentage_columns_indices = []
+    for i, column in enumerate(d_names.keys()):
+        if column in percentage_columns:
+            ymins[i] = 0
+            ymaxs[i] = 1
+            percentage_columns_indices.append(i)
+
+    dys = ymaxs - ymins
+
+    # transform all data to be compatible with the main axis
+    zs = np.zeros_like(ys)
+    zs[:, 0] = ys[:, 0]
+    zs[:, 1:] = (ys[:, 1:] - ymins[1:]) / dys[1:] * dys[0] + ymins[0]
+
+    fig, (host, ax_c) = plt.subplots(
+        figsize=(8, 4),
+        nrows=2,
+        gridspec_kw={"height_ratios": [20, 1]},
+    )
+
+    axes = [host] + [host.twinx() for i in range(ys.shape[1] - 1)]
+    for i, ax in enumerate(axes):
+        ax.set_ylim(ymins[i], ymaxs[i])
+        ax.spines["top"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+        if ax != host:
+            ax.spines["left"].set_visible(False)
+            ax.yaxis.set_ticks_position("right")
+            ax.spines["right"].set_position(("axes", i / (ys.shape[1] - 1)))
+
+    host.set_xlim(0, ys.shape[1] - 1)
+    host.set_xticks(range(ys.shape[1]))
+    host.set_xticklabels(d_names.values(), fontsize=14)
+    host.tick_params(axis="x", which="major", pad=7)
+    host.spines["right"].set_visible(False)
+    host.xaxis.tick_top()
+    host.set_title(title, fontsize=18, pad=30)
+
+    for i in percentage_columns_indices:
+        axes[i].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+    colors_masked = np.ma.masked_where(group["colors"] < 0, group["colors"])
+
+    for j in range(N):
+        color = cmap(norm(colors_masked[j]))
+
+        if not smooth_lines:
+
+            # to just draw straight lines between the axes:
+            host.plot(
+                range(ys.shape[1]),
+                zs[j, :],
+                color=color,
+            )
+        else:
+            # create bezier curves
+            # for each axis, there will a control vertex at the point itself, one at 1/3rd towards the previous and one
+            #   at one third towards the next axis; the first and last axis have one less control vertex
+            # x-coordinate of the control vertices: at each integer (for the axes) and two inbetween
+            # y-coordinate: repeat every point three times, except the first and last only twice
+            xs = np.linspace(0, len(ys) - 1, len(ys) * 3 - 2, endpoint=True)
+            verts = list(zip([x for x in xs], np.repeat(zs[j, :], 3)[1:-1]))
+
+            codes = [mpl_Path.MOVETO] + [mpl_Path.CURVE4 for _ in range(len(verts) - 1)]
+            path = mpl_Path(verts, codes)
+            patch = patches.PathPatch(
+                path,
+                facecolor="none",
+                lw=1,
+                edgecolor=color,
+            )
+            host.add_patch(patch)
+
+            # to show the control points of the beziers
+            # for x, y in verts:
+            #     host.plot(x, y, "go")
+
+    colorbar_ticks = [2, 5, 10, 20, 50]
+    cb1 = mpl.colorbar.ColorbarBase(
+        ax_c,
+        cmap=cmap,
+        norm=norm,
+        orientation="horizontal",
+        ticks=colorbar_ticks,
+    )
+    cb1.set_label(r"Significance, $Z$")
+    cb1.ax.set_xticklabels(colorbar_ticks)
+
+    fig.tight_layout()
+
+    return fig
+
+
+#%%
+
+
+def plot_single_aggregate_group(
+    group_agg_specific,
+    sim_species,
+    sim_length,
+    df_known_damage,
+    title="",
+    method="Bayesian",
+    loc="upper right",
+    markerscale=0.75,
+    xlim=None,
+    ylim=None,
+):
+
+    if method.lower() == "bayesian":
+        prefix = "Bayesian_"
+        ylabel = r"Damage"
+    else:
+        prefix = ""
+        ylabel = r"Damage (MAP)"
+
+    d_ylim = {
+        0: (0, 0.2),
+        0.035: (0, 0.2),
+        0.065: (0, 0.2),
+        0.162: (0, 0.3),
+        0.310: (0, 0.3),
+        0.472: (0, 0.4),
+        0.633: (0, 0.4),
+        0.960: (0, 0.5),
+    }
+
+    figsize = (9, 9 * np.sqrt(2))
+
+    fig, axes = plt.subplots(figsize=figsize, nrows=4, ncols=2)
+    axes = axes.flatten()
+
+    groups = group_agg_specific.groupby("sim_damage")
+    for ax, (sim_damage, group_agg) in zip(axes, groups):
+        # break
+
+        sim_damage_percent_approx = D_DAMAGE_APPROX[sim_damage]
+
+        known_damage = get_known_damage(
+            df_known_damage=df_known_damage,
+            sim_damage=sim_damage,
+            sim_species=sim_species,
+            sim_length=sim_length,
+        )
+
+        ax.axhline(
+            known_damage,
+            color="k",
+            linestyle="--",
+            label=r"$D_\mathrm{known} = " f"{known_damage*100:.1f}" r"\%$",
+        )
+        ax.set_xscale("log")
+
+        ax.set(
+            # title=f"{splitby.capitalize()} = {title}" if ax_titles else None,
+            title=r"$\delta_\mathrm{SS}=" f"{sim_damage:.3f}$",
+            ylabel=ylabel,
+            xlim=(0.8 * 10**1, 1.2 * 10**5) if xlim is None else xlim,
+            ylim=d_ylim[sim_damage] if ylim is None else ylim,
+        )
+
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+
+        if len(group_agg) == 0:
+            continue
+
+        x = group_agg["sim_N_reads"]
+
+        ax.errorbar(
+            x,
+            group_agg[f"{prefix}D_max_mean_of_mean"],
+            group_agg[f"{prefix}D_max_mean_of_std"],
+            fmt="o",
+            label="Mean of mean ± mean of std",
+            # color="C0",
+            color="grey",
+            capsize=0,
+        )
+
+        ax.set_ylim((0, ax.get_ylim()[1]))
+
+        leg_kws = dict(
+            loc=loc,
+            markerscale=markerscale,
+        )
+        handles, labels = ax.get_legend_handles_labels()
+        order = [1, 0]
+        ax.legend(
+            [handles[idx] for idx in order],
+            [labels[idx] for idx in order],
+            **leg_kws,
+        )
+
+    axes[6].set(xlabel="Number of reads")
+    axes[7].set(xlabel="Number of reads")
+
+    fig.suptitle(title, y=1.01, fontsize=20)
+
+    fig.tight_layout()
+
+    return fig
+
+
+#%%
+
+
+def _plot_all_aggregate_groups_iterator(
+    df_aggregated,
+    df_aggregated_lengths,
+    df_aggregated_contigs,
+    df_known_damage,
+    method="Bayesian",
+):
+
+    suffix = "" if method.lower() == "bayesian" else " (MAP)"
+
+    for sim_species in ["homo", "betula", "GC-low", "GC-mid", "GC-high"]:
+
+        group_agg_specific = df_aggregated.query(f"sim_species == '{sim_species}'")
+
+        title = (
+            sim_species.capitalize()
+            if sim_species in ["homo", "betula"]
+            else sim_species
+        )
+
+        fig = plot_single_aggregate_group(
+            group_agg_specific,
+            sim_species=sim_species,
+            sim_length=60,
+            df_known_damage=df_known_damage,
+            title=title + suffix,
+            method=method,
+        )
+        yield fig
+
+    for sim_length in [35, 60, 90]:
+
+        group_agg_specific = df_aggregated_lengths.query(f"sim_length == {sim_length}")
+
+        fig = plot_single_aggregate_group(
+            group_agg_specific,
+            sim_species="homo",
+            sim_length=sim_length,
+            df_known_damage=df_known_damage,
+            title=f"Fragment Length Average: {sim_length}" + suffix,
+            method=method,
+        )
+        yield fig
+
+    d_contig_translations = {
+        "contig1k": "Contig length: 1 000",
+        "contig10k": "Contig length: 10 000",
+        "contig100k": "Contig length: 100 000",
+    }
+
+    for sim_species in ["contig1k", "contig10k", "contig100k"]:
+
+        group_agg_specific = df_aggregated_contigs.query(
+            f"sim_species == '{sim_species}'"
+        )
+
+        fig = plot_single_aggregate_group(
+            group_agg_specific,
+            sim_species=sim_species,
+            sim_length=60,
+            df_known_damage=df_known_damage,
+            title=d_contig_translations[sim_species] + suffix,
+            method=method,
+        )
+        yield fig
+
+
+def plot_all_aggregate_groups(
+    df_aggregated,
+    df_aggregated_lengths,
+    df_aggregated_contigs,
+    df_known_damage,
+):
+
+    filename = Path(f"figures/bayesian/bayesian_combined_damage_ALL.pdf")
+    filename.parent.mkdir(parents=True, exist_ok=True)
+
+    with PdfPages(filename) as pdf:
+        figs = _plot_all_aggregate_groups_iterator(
+            df_aggregated,
+            df_aggregated_lengths,
+            df_aggregated_contigs,
+            df_known_damage=df_known_damage,
+            method="Bayesian",
+        )
+
+        for fig in tqdm(figs, desc="Saving Bayesian figures", total=11):
+            pdf.savefig(fig, bbox_inches="tight")
+            plt.close()
+
+    filename = Path(f"figures/MAP/MAP_combined_damage_ALL.pdf")
+    filename.parent.mkdir(parents=True, exist_ok=True)
+
+    with PdfPages(filename) as pdf:
+        figs = _plot_all_aggregate_groups_iterator(
+            df_aggregated,
+            df_aggregated_lengths,
+            df_aggregated_contigs,
+            df_known_damage=df_known_damage,
+            method="MAP",
+        )
+
+        for fig in tqdm(figs, desc="Saving MAP figures", total=11):
+            pdf.savefig(fig, bbox_inches="tight")
+            plt.close()

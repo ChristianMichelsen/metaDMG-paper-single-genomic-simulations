@@ -18,6 +18,7 @@ import utils
 
 plt.style.use("plotstyle.mplstyle")
 
+
 #%%
 
 # save_plots = False
@@ -48,7 +49,7 @@ all_species = [
 
 #%%
 
-# reload(utils)
+reload(utils)
 df_all = utils.load_multiple_species(all_species)
 
 #%%
@@ -372,19 +373,22 @@ if make_plots:
 
 #%%
 
+
 group_zero_damage = df_zero_damage.query("sim_N_reads == 1000")
 
-reload(utils)
+if make_plots:
 
-g = utils.plot_zero_damage_group(
-    group_zero_damage,
-    method="Bayesian",
-    title="",
-    xlim=(0.1, 0.9),
-    ylim=(0.0, 0.008),
-)
+    reload(utils)
 
-g.savefig("figures/zero_damage_1000_reads.pdf")
+    g = utils.plot_zero_damage_group(
+        group_zero_damage,
+        method="Bayesian",
+        title="",
+        xlim=(0.1, 0.9),
+        ylim=(0.0, 0.008),
+    )
+
+    g.savefig("figures/zero_damage_1000_reads.pdf")
 # %%
 
 
@@ -436,7 +440,6 @@ df_pydamage = load_pydamage_results().query("sim_length == 60")
 
 #%%
 
-x = x
 
 # %%
 
@@ -470,8 +473,22 @@ df_combined = pd.concat(
 )
 
 
+df_combined_wide = pd.concat(
+    [
+        df_metaDMG_100.reset_index(drop=True)[cols[:-1]],
+        df_pydamage_100.reset_index(drop=True)[
+            ["predicted_accuracy", "damage_model_pmax", "qvalue"]
+        ],
+    ],
+    axis=1,
+)
+
 #%%
 
+
+x = x
+
+#%%
 
 filename = Path(f"figures/pydamage_comparison_special_axis.pdf")
 filename.parent.mkdir(parents=True, exist_ok=True)
@@ -551,5 +568,44 @@ with PdfPages(filename) as pdf:
 
         pdf.savefig(fig, bbox_inches="tight")
         plt.close()
+
+
+
+#%%
+
+reload(utils)
+
+
+filename = Path(f"figures/pydamage_comparison2.pdf")
+filename.parent.mkdir(parents=True, exist_ok=True)
+
+with PdfPages(filename) as pdf:
+
+    it = df_combined_wide.groupby(["sim_damage", "sim_N_reads"])
+
+    for (sim_damage, sim_N_reads), group in it:
+
+        group = utils.add_colors(group)
+
+        fig = utils.make_parallel_plots(
+            group,
+            sim_damage,
+            sim_N_reads,
+            smooth_lines=True,
+        )
+
+        pdf.savefig(fig, bbox_inches="tight")
+        plt.close()
+
+
+#%%
+
+
+utils.plot_all_aggregate_groups(
+    df_aggregated,
+    df_aggregated_lengths,
+    df_aggregated_contigs,
+    df_known_damage=df_known_damage,
+)
 
 # %%
