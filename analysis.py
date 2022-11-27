@@ -570,8 +570,9 @@ with PdfPages(filename) as pdf:
         plt.close()
 
 
-
 #%%
+
+x = x
 
 reload(utils)
 
@@ -583,7 +584,7 @@ with PdfPages(filename) as pdf:
 
     it = df_combined_wide.groupby(["sim_damage", "sim_N_reads"])
 
-    for (sim_damage, sim_N_reads), group in it:
+    for (sim_damage, sim_N_reads), group in tqdm(it):
 
         group = utils.add_colors(group)
 
@@ -594,13 +595,36 @@ with PdfPages(filename) as pdf:
             smooth_lines=True,
         )
 
-        pdf.savefig(fig, bbox_inches="tight")
+        pdf.savefig(fig, bbox_inches="tight", transparent=True)
         plt.close()
 
 
+filename = Path(f"figures/pydamage_comparison2-without-10-reads.pdf")
+filename.parent.mkdir(parents=True, exist_ok=True)
+
+with PdfPages(filename) as pdf:
+
+    it = df_combined_wide.query("sim_N_reads > 11").groupby(
+        ["sim_damage", "sim_N_reads"]
+    )
+
+    for (sim_damage, sim_N_reads), group in tqdm(it):
+
+        group = utils.add_colors(group)
+
+        fig = utils.make_parallel_plots(
+            group,
+            sim_damage,
+            sim_N_reads,
+            smooth_lines=True,
+        )
+
+        pdf.savefig(fig, bbox_inches="tight", transparent=True)
+        plt.close()
+
 #%%
 
-
+reload(utils)
 utils.plot_all_aggregate_groups(
     df_aggregated,
     df_aggregated_lengths,

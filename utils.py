@@ -1678,7 +1678,7 @@ def plot_zero_damage_groups(df_zero_damage):
                 method="Bayesian",
                 title=rf"sim_N_reads = {sim_N_reads}, \# = {len(group_zero_damage)}",
             )
-            pdf.savefig(fig.fig)
+            pdf.savefig(fig.fig, transparent=True)
             plt.close()
 
     filename = Path(f"figures/MAP/MAP_zero_damage_plots.pdf")
@@ -1698,7 +1698,7 @@ def plot_zero_damage_groups(df_zero_damage):
                 method="MAP",
                 title=rf"sim_N_reads = {sim_N_reads}, \# = {len(group_zero_damage)}",
             )
-            pdf.savefig(fig.fig)
+            pdf.savefig(fig.fig, transparent=True)
             plt.close()
 
 
@@ -2640,7 +2640,7 @@ def plot_all_aggregate_groups(
         )
 
         for fig in tqdm(figs, desc="Saving Bayesian figures", total=11):
-            pdf.savefig(fig, bbox_inches="tight")
+            pdf.savefig(fig, bbox_inches="tight", transparent=True)
             plt.close()
 
     filename = Path(f"figures/MAP/MAP_combined_damage_ALL.pdf")
@@ -2656,5 +2656,5 @@ def plot_all_aggregate_groups(
         )
 
         for fig in tqdm(figs, desc="Saving MAP figures", total=11):
-            pdf.savefig(fig, bbox_inches="tight")
+            pdf.savefig(fig, bbox_inches="tight", transparent=True)
             plt.close()
