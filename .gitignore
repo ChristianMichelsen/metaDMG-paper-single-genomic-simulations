@@ -3,6 +3,7 @@
 /bam/
 /fasta/
 /true-damage/
+__pycache__/
 
 __pycache__
 /.cache/*
